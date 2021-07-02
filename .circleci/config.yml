@@ -1,0 +1,62 @@
+version: 2.1
+
+orbs:
+  aws-eks: circleci/aws-eks@1.0.3
+
+jobs:
+  run-static-code-analysis:
+    docker:
+      - image: circleci/python:3.8
+    steps:
+      - checkout
+      - run:
+          name: Installing Python dependencies
+          command: pip install -r requirements_cicd.txt
+      - run:
+          name: Running tests
+          command: tox -e py38-static_code_analysis
+  run-tests:
+    docker: 
+      - image: circleci/python:3.8
+    steps:
+      - checkout
+      - run:
+          name: Installing Python dependencies
+          command: pip install -r requirements_cicd.txt
+      - run: 
+          name: Running tests
+          command: tox -e py38-unit_and_functional_tests
+  trigger-bodywork-deployment:
+    executor:
+      name: aws-eks/python
+      tag: "3.8"
+    steps:
+      - aws-eks/update-kubeconfig-with-authenticator:
+          cluster-name: bodywork-dev
+      - checkout
+      - run:
+          name: Installing Python dependencies
+          command: pip install -r requirements_cicd.txt
+      - run: 
+          name: Trigger Deployment
+          command: |
+            bodywork deployment create --local --ns=time-to-dispatch --name=cicd-pipeline --git-repo-url=https://github.com/bodywork-ml/ml-pipeline-engineering --git-repo-branch=master
+
+workflows:
+  version: 2
+  test-build-deploy:
+    jobs:
+      - run-static-code-analysis:
+          filters:
+            branches:
+              ignore: master
+      - run-tests:
+          requires:
+            - run-static-code-analysis
+          filters:
+            branches:
+              ignore: master
+      - trigger-bodywork-deployment:
+          filters:
+            branches:
+              only: master
