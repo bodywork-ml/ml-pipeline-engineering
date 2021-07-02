@@ -1,0 +1,5 @@
+bodywork==2.1.6
+tox==3.23.1
+pytest==6.2.4
+mypy==0.910
+flake8==3.9.2
