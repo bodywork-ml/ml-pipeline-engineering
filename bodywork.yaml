@@ -1,0 +1,37 @@
+version: "1.0"
+project:
+  name: time-to-dispatch
+  docker_image: bodyworkml/bodywork-core:2.1.6
+  DAG: train_model >> serve_model
+stages:
+  train_model:
+    executable_module_path: pipeline/train_model.py
+    requirements:
+      - numpy==1.21.0
+      - pandas==1.2.5
+      - scikit-learn==0.24.2
+      - boto3==1.17.101
+      - joblib==1.0.1
+    cpu_request: 0.5
+    memory_request_mb: 100
+    batch:
+      max_completion_time_seconds: 30
+      retries: 2
+  serve_model:
+    executable_module_path: pipeline/serve_model.py
+    requirements:
+      - numpy==1.21.0
+      - scikit-learn==0.24.2
+      - boto3==1.17.101
+      - joblib==1.0.1
+      - fastapi==0.65.2
+      - uvicorn==0.14.0
+    cpu_request: 0.25
+    memory_request_mb: 100
+    service:
+      max_startup_time_seconds: 30
+      replicas: 2
+      port: 8000
+      ingress: true
+logging:
+  log_level: INFO
