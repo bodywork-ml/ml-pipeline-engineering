@@ -1,12 +1,12 @@
 """
 Tests for model training stage.
 """
-from _pytest.capture import CaptureFixture
+from _pytest.logging import LogCaptureFixture
 
 from pipeline.train_model import main
 
 
-def test_main_execution(capsys: CaptureFixture):
+def test_main_execution(caplog: LogCaptureFixture):
     main()
-    stdout = capsys.readouterr().out
-    assert "Hello from train_model stage" in stdout
+    logs = caplog.text
+    assert "Hello from train_model stage" in logs

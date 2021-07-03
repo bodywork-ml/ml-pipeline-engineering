@@ -3,10 +3,13 @@
 - Train model.
 - Persist model.
 """
+from pipeline.utils import configure_logger
+
+log = configure_logger()
 
 
 def main() -> None:
-    print("Hello from train_model stage.")
+    log.info("Hello from train_model stage.")
 
 
 if __name__ == "__main__":
