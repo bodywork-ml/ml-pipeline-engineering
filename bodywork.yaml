@@ -1,7 +1,7 @@
 version: "1.0"
 project:
   name: time-to-dispatch
-  docker_image: bodyworkml/bodywork-core:2.1.6
+  docker_image: bodyworkml/bodywork-core:2.1.7
   DAG: train_model >> serve_model
 stages:
   train_model:

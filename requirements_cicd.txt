@@ -1,4 +1,4 @@
-bodywork==2.1.6
+bodywork==2.1.7
 tox==3.23.1
 pytest==6.2.4
 mypy==0.910
