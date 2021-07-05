@@ -22,7 +22,7 @@ class Prediction(BaseModel):
 
 
 @app.post(
-    "/api/v0.0.1/time_to_dispatch",
+    "/api/v0.1/time_to_dispatch",
     status_code=status.HTTP_200_OK,
     response_model=Prediction,
 )

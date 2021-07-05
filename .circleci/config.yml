@@ -40,7 +40,12 @@ jobs:
       - run: 
           name: Trigger Deployment
           command: |
-            bodywork deployment create --local --ns=time-to-dispatch --name=cicd-pipeline --git-repo-url=https://github.com/bodywork-ml/ml-pipeline-engineering --git-repo-branch=master
+            bodywork deployment create \
+              --namespace=pipelines \
+              --name=cicd-pipeline \
+              --git-repo-url=https://github.com/bodywork-ml/ml-pipeline-engineering \
+              --git-repo-branch=master \
+              --local-workflow-controller
 
 workflows:
   version: 2
