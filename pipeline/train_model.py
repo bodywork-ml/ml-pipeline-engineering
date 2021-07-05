@@ -9,7 +9,7 @@ log = configure_logger()
 
 
 def main() -> None:
-    log.info("Hello from train_model stage.")
+    log.info("Starting train-model stage.")
 
 
 if __name__ == "__main__":

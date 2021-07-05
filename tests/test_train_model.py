@@ -6,7 +6,7 @@ from _pytest.logging import LogCaptureFixture
 from pipeline.train_model import main
 
 
-def test_main_execution(caplog: LogCaptureFixture):
+def test_main_logs_info_msg(caplog: LogCaptureFixture):
     main()
     logs = caplog.text
-    assert "Hello from train_model stage" in logs
+    assert "Starting train-model stage" in logs
