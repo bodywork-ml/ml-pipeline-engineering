@@ -19,7 +19,7 @@ def test_web_api_returns_valid_response_given_valid_data():
 
 
 def test_web_api_returns_error_code_given_invalid_data():
-    prediction_request = {"product_code": "SKU001", "orders": 100}
+    prediction_request = {"product_code": "SKU001", "foo": 100}
     prediction_response = test_client.post(
         "/api/v0.1/time_to_dispatch", json=prediction_request
     )
