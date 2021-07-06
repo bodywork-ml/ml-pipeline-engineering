@@ -128,7 +128,7 @@ We’ve split the various Python package requirements into separate files:
 
 - `requirements_pipe.txt` contains the packages required by the pipeline.
 - `requirements_cicd.txt` contains the packages required by the CICD pipeline.
-- `notebooks/requirements_nb.txt`contains the package require to run the notebook.
+- `notebooks/requirements_nb.txt`contains the package required to run the notebook.
 
 We’re planning to deploy the pipeline using Bodywork, which currently targets the Python 3.8 runtime, so we create a Python 3.8 virtual environment in which to install all requirements.
 
@@ -240,13 +240,13 @@ if __name__ == "__main__":
 
 If you’re unfamiliar with how FastAPI uses Python type hints and [Pydantic](https://pydantic-docs.helpmanual.io) to define JSON schema, then take a look at the [FastAPI docs](https://fastapi.tiangolo.com/python-types/).
 
-You can run all test in the `tests` folder using,
+You can run all tests in the `tests` folder using,
 
 ```text
 $ pytest
 ```
 
-Or isolate a specific test using the `-k` flag - for example,
+Or isolate a specific test using the `-k` flag, for example,
 
 ```text
 $ pytest -k test_web_api_returns_valid_response_given_valid_data
@@ -341,7 +341,7 @@ As defined in the tests. FastAPI will also automatically expose the following en
 
 Here at Bodywork HQ, we’re advocates for the [“Hello, Production”](https://blog.thepete.net/blog/2019/10/04/hello-production/) school-of-thought, that encourages teams to make the deployment of a skeleton application (such as the trivial pipeline sketched-out in this article), one of the first tasks for any new project. As we have written about [before](https://www.bodyworkml.com/posts/scikit-learn-meet-production), there are many benefits to taking deployment pains early on in a software development project, and then using the initial deployment skeleton as the basis for rapidly delivering useful functionality into production.
 
-We’re planning to deploy to Kubernetes using [Bodywork](https://bodywork.readthedocs.io/en/latest/), but we appreciate that not everyone has easy access to a Kubernetes cluster for development. If this your reality, then the next best thing your team could do, is to start by deploying to a local test cluster, to make sure that the pipeline is at least deploy-able. You can get started with a single node cluster on your laptop, using Minikube - see [our guide](https://bodywork.readthedocs.io/en/latest/kubernetes/#getting-started-with-kubernetes) to get this up-and-running in **under 10 minutes**.
+We’re planning to deploy to Kubernetes using [Bodywork](https://bodywork.readthedocs.io/en/latest/), but we appreciate that not everyone has easy access to a Kubernetes cluster for development. If this is your reality, then the next best thing your team could do, is to start by deploying to a local test cluster, to make sure that the pipeline is at least deploy-able. You can get started with a single node cluster on your laptop, using Minikube - see [our guide](https://bodywork.readthedocs.io/en/latest/kubernetes/#getting-started-with-kubernetes) to get this up-and-running in **under 10 minutes**.
 
 The full description of the deployment is contained in `bodywork.yaml`, which we’ve reproduced below.
 
@@ -424,12 +424,12 @@ Which should return the same response as before,
 <img src="https://bodywork-media.s3.eu-west-2.amazonaws.com/eng-ml-pipes/pt1/ci_workflow.png"/>
 </div>
 
-Now that the overall structure of the project has been created, all that remains is to put in-place the processes required to get new code merged and deployed, as quickly and efficiently as possible. The process of getting new code merged on an *ad hoc*  basis, is referred to as Continuous Integration (CI), while getting new code deployed as soon as it is merged, is known as Continuous Deployment (CD). The workflow we intend to impose is outlined in the diagram above. Briefly:
+Now that the overall structure of the project has been created, all that remains is to put in-place the processes required to get new code merged and deployed as quickly and efficiently as possible. The process of getting new code merged on an *ad hoc*  basis, is referred to as Continuous Integration (CI), while getting new code deployed as soon as it is merged, is known as Continuous Deployment (CD). The workflow we intend to impose is outlined in the diagram above. Briefly:
 
-1. Pushing changes (commits) to the `master` branch of the repository, is forbidden. All changes should first be raised as merge (or pull) requests, that have to pass all automated testing and some kind of peer review process (e.g. a code review), before they can be merged to the `master` branch.
+1. Pushing changes (commits) to the `master` branch of the repository is forbidden. All changes should first be raised as merge (or pull) requests, that have to pass all automated testing and some kind of peer review process (e.g. a code review), before they can be merged to the `master` branch.
 2. Once changes are merged to the master branch, they can be deployed.
 
-Here at Bodywork HQ we use [GitHub](https://github.com/bodywork-ml/ml-pipeline-engineering) and [CircleCI](https://app.circleci.com/pipelines/github/bodywork-ml) to run this workflow. [Branch protection rules](https://docs.github.com/en/github/administering-a-repository/defining-the-mergeability-of-pull-requests/about-protected-branches) on GitHub are used to prevent changes being pushed to master, unless automated tests and peer review have been passed. CircleCI is a paid-for CI/CD service (with an outrageously generous free-tier), that automatically integrates with GitHub to enable jobs (such as automated tests), to be triggered automatically following merge requests, or changes to the `master`branch, etc. Our CircleCI pipeline is defined in `.circleci/config.yml` and reproduced below.
+Here at Bodywork HQ we use [GitHub](https://github.com/bodywork-ml/ml-pipeline-engineering) and [CircleCI](https://app.circleci.com/pipelines/github/bodywork-ml) to run this workflow. [Branch protection rules](https://docs.github.com/en/github/administering-a-repository/defining-the-mergeability-of-pull-requests/about-protected-branches) on GitHub are used to prevent changes being pushed to master, unless automated tests and peer review have been passed. CircleCI is a paid-for CI/CD service (with an outrageously generous free-tier) that automatically integrates with GitHub to enable jobs (such as automated tests) to be triggered automatically following merge requests, or changes to the `master`branch, etc. Our CircleCI pipeline is defined in `.circleci/config.yml` and reproduced below.
 
 ```yaml
 version: 2.1
@@ -513,4 +513,4 @@ Although this configuration file is specific to CircleCI, it will be easily reco
 
 ## Wrapping-Up
 
-In the first part of this project we have expended a lot of effort to lay the foundations for the work that is to come - developing the model training job, the prediction service and deploying these to a production environment where they will need to be monitored. Thanks to automated tests and CI/CD, out team will be able to quickly iterate towards a well-engineered solution, with results that can be demonstrated to stakeholders early on.
+In the first part of this project we have expended a lot of effort to lay the foundations for the work that is to come - developing the model training job, the prediction service and deploying these to a production environment where they will need to be monitored. Thanks to automated tests and CI/CD, our team will be able to quickly iterate towards a well-engineered solution, with results that can be demonstrated to stakeholders early on.
