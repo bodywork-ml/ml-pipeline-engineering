@@ -9,7 +9,7 @@ This first part is focused on how to setup a ML pipeline engineering project and
 - Basic solution architecture.
 - How to structure the codebase (and repo).
 - Setting-up automated testing and static code analysis tools.
-- Making an initial “”Hello, Production” deployment.
+- Making an initial “Hello, Production” deployment.
 - Configuring a CI/CD pipeline.
 
 ## Reviewing the Business Problem
