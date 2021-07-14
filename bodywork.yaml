@@ -6,6 +6,8 @@ project:
 stages:
   train_model:
     executable_module_path: pipeline/train_model.py
+    requirements:
+      - git+https://github.com/bodywork-ml/bodywork-pipeline-utils@v0.1.0
     cpu_request: 0.5
     memory_request_mb: 100
     batch:
@@ -16,6 +18,7 @@ stages:
     requirements:
       - fastapi==0.65.2
       - uvicorn==0.14.0
+      - git+https://github.com/bodywork-ml/bodywork-pipeline-utils@v0.1.0
     cpu_request: 0.25
     memory_request_mb: 100
     service:
