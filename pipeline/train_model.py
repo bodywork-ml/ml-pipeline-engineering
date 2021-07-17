@@ -15,7 +15,7 @@ from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.tree import DecisionTreeRegressor
 
-AWS_S3_PROJECT_BUCKET = "bodywork-time-to-dispatch"
+CATEGORY_MAP = {"SKU001": 0, "SKU002": 1, "SKU003": 2, "SKU004": 3, "SKU005": 4}
 HYPERPARAM_GRID = {
     "random_state": [42],
     "criterion": ["mse", "mae"],
@@ -23,7 +23,6 @@ HYPERPARAM_GRID = {
     "min_samples_split": [2, 3, 4, 5, 6, 7, 8, 9, 10],
     "min_samples_leaf": [2, 3, 4, 5, 6, 7, 8, 9, 10],
 }
-R2_METRIC_THRESHOLD = 0.8
 
 log = logging.configure_logger()
 
@@ -44,32 +43,30 @@ class TaskMetrics(NamedTuple):
     mean_absolute_error: float
 
 
-def main() -> None:
+def main(
+    s3_bucket: str, metric_threshold: float, hyperparam_grid: Dict[str, Any]
+) -> None:
     """Main training job."""
     log.info("Starting train-model stage.")
-    try:
-        dataset = aws.get_latest_csv_dataset_from_s3(AWS_S3_PROJECT_BUCKET, "datasets")
-        log.info(f"Retrieved dataset from s3://{AWS_S3_PROJECT_BUCKET}/{dataset.key}")
+    dataset = aws.get_latest_csv_dataset_from_s3(s3_bucket, "datasets")
+    log.info(f"Retrieved dataset from s3://{s3_bucket}/{dataset.key}")
 
-        feature_and_labels = prepare_data(dataset.data)
-        model, metrics = train_model(feature_and_labels, HYPERPARAM_GRID)
-        log.info(
-            f"Trained model: r-squared={metrics.r_squared:.3f}, "
-            f"MAE={metrics.mean_absolute_error:.3f}"
+    feature_and_labels = prepare_data(dataset.data)
+    model, metrics = train_model(feature_and_labels, hyperparam_grid)
+    log.info(
+        f"Trained model: r-squared={metrics.r_squared:.3f}, "
+        f"MAE={metrics.mean_absolute_error:.3f}"
+    )
+
+    if metrics.r_squared >= metric_threshold:
+        s3_location = persist_model(s3_bucket, model, dataset, metrics)
+        log.info(f"Model serialised and persisted to s3://{s3_location}")
+    else:
+        msg = (
+            f"r-squared metric ({{metrics.r_squared:.3f}}) is below deployment "
+            f"threshold {metric_threshold}"
         )
-
-        if metrics.r_squared >= R2_METRIC_THRESHOLD:
-            s3_location = persist_model(model, dataset, metrics)
-            log.info(f"Model serialise dand persisted to s3://{s3_location}")
-        else:
-            msg = (
-                f"r-squared metric ({{metrics.r_squared:.3f}}) is below deployment "
-                f"threshold {R2_METRIC_THRESHOLD}"
-            )
-            raise RuntimeError(msg)
-    except Exception as e:
-        log.error(f"Error encountered when training model - {e}")
-        sys.exit(1)
+        raise RuntimeError(msg)
 
 
 def prepare_data(data: DataFrame) -> FeatureAndLabels:
@@ -108,23 +105,42 @@ def train_model(
 
 
 def preprocess(df: DataFrame) -> DataFrame:
-    """Create features for traiing model."""
+    """Create features for training model."""
     df_processed = df.copy()
-    category_map = {"SKU001": 0, "SKU002": 1, "SKU003": 2, "SKU004": 3, "SKU005": 4}
-    df_processed["product_code"] = df["product_code"].apply(lambda e: category_map[e])
+    df_processed["product_code"] = df["product_code"].apply(lambda e: CATEGORY_MAP[e])
     return df_processed.values
 
 
-def persist_model(model: BaseEstimator, dataset: Dataset, metrics: TaskMetrics) -> str:
+def persist_model(
+    bucket: str, model: BaseEstimator, dataset: Dataset, metrics: TaskMetrics
+) -> str:
     """Persist the model and metadata to S3."""
     metadata = {
         "r_squared": metrics.r_squared,
         "mean_absolute_error": metrics.mean_absolute_error,
+        "category_map": CATEGORY_MAP
     }
     wrapped_model = aws.Model("time-to-dispatch", model, dataset, metadata)
-    s3_location = wrapped_model.put_model_to_s3(AWS_S3_PROJECT_BUCKET, "models")
+    s3_location = wrapped_model.put_model_to_s3(bucket, "models")
     return s3_location
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        args = sys.argv
+        s3_bucket = args[1]
+        r2_metric_threshold = float(args[2])
+        if r2_metric_threshold <= 0 or r2_metric_threshold > 1:
+            raise ValueError()
+    except (ValueError, IndexError):
+        log.error(
+            "Invalid arguments passed to train_model.py. "
+            "Expected S3_BUCKET R_SQUARED_THRESHOLD, where R_SQUARED_THRESHOLD must be "
+            "in range [0, 1]."
+        )
+
+    try:
+        main(s3_bucket, r2_metric_threshold, HYPERPARAM_GRID)
+    except Exception as e:
+        log.error(f"Error encountered when training model - {e}")
+        sys.exit(1)
