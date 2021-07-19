@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 from numpy import array
 from bodywork_pipeline_utils.aws import Dataset
 from pandas import read_csv, DataFrame
-from pytest import approx, fixture, raises
+from pytest import fixture, raises
 from _pytest.logging import LogCaptureFixture
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_is_fitted
@@ -33,22 +33,26 @@ def dataset() -> Dataset:
 def test_prepare_data_splits_labels_and_features_into_test_and_train(dataset: Dataset):
     label_column = "hours_to_dispatch"
     n_rows_in_dataset = dataset.data.shape[0]
+    n_cols_in_dataset = dataset.data.shape[1]
     prepared_data = prepare_data(dataset.data)
-    assert prepared_data.X_train.shape[0] == approx(0.8 * n_rows_in_dataset)
-    assert prepared_data.X_train.shape[1] == 2
+
+    assert prepared_data.X_train.shape[1] == n_cols_in_dataset - 1
     assert label_column not in prepared_data.X_train.columns
-    
-    assert prepared_data.X_test.shape[0] == approx(0.2 * n_rows_in_dataset)
-    assert prepared_data.X_test.shape[1] == 2
+
+    assert prepared_data.X_test.shape[1] == n_cols_in_dataset - 1
     assert label_column not in prepared_data.X_test.columns
 
     assert prepared_data.y_train.ndim == 1
     assert prepared_data.y_train.name == label_column
-    assert prepared_data.y_train.shape[0] == approx(0.8 * n_rows_in_dataset)
 
     assert prepared_data.y_test.ndim == 1
     assert prepared_data.y_test.name == label_column
-    assert prepared_data.y_test.shape[0] == approx(0.2 * n_rows_in_dataset)
+
+    assert (prepared_data.X_train.shape[0] + prepared_data.X_test.shape[0]
+            == n_rows_in_dataset)
+
+    assert (prepared_data.y_train.shape[0] + prepared_data.y_test.shape[0]
+            == n_rows_in_dataset)
 
 
 def test_preprocess_processes_features(dataset: Dataset):
@@ -90,7 +94,7 @@ def test_train_job_happy_path(
     caplog: LogCaptureFixture,
 ):
     mock_aws.get_latest_csv_dataset_from_s3.return_value = dataset
-    main("project-bucket", 0.8, {"random_state": [42]})
+    main("project-bucket", 0.8, 0.9, {"random_state": [42]})
     mock_aws.Model().put_model_to_s3.assert_called_once()
     logs = caplog.text
     assert "Starting train-model stage" in logs
@@ -100,13 +104,25 @@ def test_train_job_happy_path(
 
 
 @patch("pipeline.train_model.aws")
-def test_train_job_raises_exception_when_metrics_below_threshold(
+def test_train_job_raises_exception_when_metrics_below_error_threshold(
     mock_aws: MagicMock,
     dataset: Dataset,
 ):
     mock_aws.get_latest_csv_dataset_from_s3.return_value = dataset
     with raises(RuntimeError, match="below deployment threshold"):
-        main("project-bucket", 1, {"random_state": [42]})
+        main("project-bucket", 1, 0.9, {"random_state": [42]})
+
+
+@patch("pipeline.train_model.aws")
+def test_train_job_logs_warning_when_metrics_below_warning_threshold(
+    mock_aws: MagicMock,
+    dataset: Dataset,
+    caplog: LogCaptureFixture,
+):
+    mock_aws.get_latest_csv_dataset_from_s3.return_value = dataset
+    main("project-bucket", 0.5, 0.9, {"random_state": [42]})
+    assert "WARNING" in caplog.text
+    assert "breached warning threshold" in caplog.text
 
 
 def test_run_job_handles_error_for_invalid_args():
@@ -117,7 +133,7 @@ def test_run_job_handles_error_for_invalid_args():
     assert "ERROR" in process_one.stdout
 
     process_two = run(
-        ["python", "pipeline/train_model.py", "my-bucket", "-1"],
+        ["python", "pipeline/train_model.py", "my-bucket", "-1", "0.5"],
         capture_output=True,
         encoding="utf-8"
     )
@@ -125,7 +141,23 @@ def test_run_job_handles_error_for_invalid_args():
     assert "ERROR" in process_two.stdout
 
     process_three = run(
-        ["python", "pipeline/train_model.py", "my-bucket", "2"],
+        ["python", "pipeline/train_model.py", "my-bucket", "2", "0.5"],
+        capture_output=True,
+        encoding="utf-8"
+    )
+    assert process_three.returncode != 0
+    assert "ERROR" in process_three.stdout
+
+    process_two = run(
+        ["python", "pipeline/train_model.py", "my-bucket", "0.5", "-1"],
+        capture_output=True,
+        encoding="utf-8"
+    )
+    assert process_two.returncode != 0
+    assert "ERROR" in process_two.stdout
+
+    process_three = run(
+        ["python", "pipeline/train_model.py", "my-bucket", "0.5", "2"],
         capture_output=True,
         encoding="utf-8"
     )

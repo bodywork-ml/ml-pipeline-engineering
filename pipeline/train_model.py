@@ -44,7 +44,10 @@ class TaskMetrics(NamedTuple):
 
 
 def main(
-    s3_bucket: str, metric_threshold: float, hyperparam_grid: Dict[str, Any]
+    s3_bucket: str,
+    metric_error_threshold: float,
+    metric_warning_threshold: float,
+    hyperparam_grid: Dict[str, Any]
 ) -> None:
     """Main training job."""
     log.info("Starting train-model stage.")
@@ -58,13 +61,15 @@ def main(
         f"MAE={metrics.mean_absolute_error:.3f}"
     )
 
-    if metrics.r_squared >= metric_threshold:
+    if metrics.r_squared >= metric_error_threshold:
+        if metrics.r_squared >= metric_warning_threshold:
+            log.warning("Metrics breached warning threshold - check for drift.")
         s3_location = persist_model(s3_bucket, model, dataset, metrics)
         log.info(f"Model serialised and persisted to s3://{s3_location}")
     else:
         msg = (
             f"r-squared metric ({{metrics.r_squared:.3f}}) is below deployment "
-            f"threshold {metric_threshold}"
+            f"threshold {metric_error_threshold}"
         )
         raise RuntimeError(msg)
 
@@ -129,18 +134,27 @@ if __name__ == "__main__":
     try:
         args = sys.argv
         s3_bucket = args[1]
-        r2_metric_threshold = float(args[2])
-        if r2_metric_threshold <= 0 or r2_metric_threshold > 1:
+        r2_metric_error_threshold = float(args[2])
+        if r2_metric_error_threshold <= 0 or r2_metric_error_threshold > 1:
             raise ValueError()
+        r2_metric_warning_threshold = float(args[2])
+        if r2_metric_warning_threshold <= 0 or r2_metric_warning_threshold > 1:
+            raise ValueError()
+
     except (ValueError, IndexError):
         log.error(
             "Invalid arguments passed to train_model.py. "
-            "Expected S3_BUCKET R_SQUARED_THRESHOLD, where R_SQUARED_THRESHOLD must be "
-            "in range [0, 1]."
+            "Expected S3_BUCKET R_SQUARED_ERROR_THRESHOLD R_SQUARED_WARNING_THRESHOLD, "
+            "where all thresholds must be in the range [0, 1]."
         )
 
     try:
-        main(s3_bucket, r2_metric_threshold, HYPERPARAM_GRID)
+        main(
+            s3_bucket,
+            r2_metric_error_threshold,
+            r2_metric_warning_threshold,
+            HYPERPARAM_GRID
+        )
     except Exception as e:
         log.error(f"Error encountered when training model - {e}")
         sys.exit(1)
