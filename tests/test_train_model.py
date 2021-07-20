@@ -10,6 +10,7 @@ from bodywork_pipeline_utils.aws import Dataset
 from pandas import read_csv, DataFrame
 from pytest import fixture, raises
 from _pytest.logging import LogCaptureFixture
+from sklearn.dummy import DummyRegressor
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_is_fitted
 
@@ -19,7 +20,8 @@ from pipeline.train_model import (
     main,
     prepare_data,
     preprocess,
-    train_model
+    train_model,
+    verify_trained_model_logic
 )
 
 
@@ -70,7 +72,7 @@ def test_compute_metrics():
     assert metrics.mean_absolute_error == 1.0
 
 
-def test_train_model_yields_valid_model(dataset: Dataset):
+def test_train_model_yields_model(dataset: Dataset):
     prepared_data = FeatureAndLabels(
         dataset.data[["orders_placed", "product_code"]][:10],
         dataset.data[["orders_placed", "product_code"]][10:20],
@@ -83,8 +85,46 @@ def test_train_model_yields_valid_model(dataset: Dataset):
         assert True
     except NotFittedError:
         assert False
-    prediction = model.predict(array([[12, 3]])).tolist()[0]
-    assert prediction > 0
+
+
+def test_verify_trained_model_logic_raises_exception_for_failing_models(
+    dataset: Dataset
+):
+    prepared_data = FeatureAndLabels(
+        dataset.data[["orders_placed", "product_code"]][:10],
+        dataset.data[["orders_placed", "product_code"]][10:20],
+        dataset.data["hours_to_dispatch"][:10],
+        dataset.data["hours_to_dispatch"][10:20]
+    )
+
+    dummy_model = DummyRegressor(strategy="constant", constant=-1.0)
+    dummy_model.fit(prepared_data.X_train, prepared_data.y_train)
+    expected_exception_str = (
+        "Trained model failed verification: "
+        "hours_to_dispatch predictions do not increase with orders_placed."
+    )
+    with raises(RuntimeError, match=expected_exception_str):
+        verify_trained_model_logic(dummy_model, prepared_data)
+
+    dummy_model = DummyRegressor(strategy="constant", constant=-1.0)
+    dummy_model.fit(prepared_data.X_train, prepared_data.y_train)
+    expected_exception_str = (
+        "Trained model failed verification: "
+        "hours_to_dispatch predictions do not increase with orders_placed, "
+        "negative hours_to_dispatch predictions found for test set."
+    )
+    with raises(RuntimeError, match=expected_exception_str):
+        verify_trained_model_logic(dummy_model, prepared_data)
+
+    dummy_model = DummyRegressor(strategy="constant", constant=1000.0)
+    dummy_model.fit(prepared_data.X_train, prepared_data.y_train)
+    expected_exception_str = (
+        "Trained model failed verification: "
+        "hours_to_dispatch predictions do not increase with orders_placed, "
+        "outlier hours_to_dispatch predictions found for test set."
+    )
+    with raises(RuntimeError, match=expected_exception_str):
+        verify_trained_model_logic(dummy_model, prepared_data)
 
 
 @patch("pipeline.train_model.aws")

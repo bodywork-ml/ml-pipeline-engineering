@@ -4,11 +4,11 @@
 - Persist model to AWS S3.
 """
 import sys
-from typing import Any, Dict, NamedTuple, Tuple
+from typing import Any, Dict, List, NamedTuple, Tuple
 
 from bodywork_pipeline_utils import aws, logging
 from bodywork_pipeline_utils.aws.datasets import Dataset
-from numpy import ndarray
+from numpy import array, ndarray
 from pandas import DataFrame
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import GridSearchCV, train_test_split
@@ -56,6 +56,7 @@ def main(
 
     feature_and_labels = prepare_data(dataset.data)
     model, metrics = train_model(feature_and_labels, hyperparam_grid)
+    verify_trained_model_logic(model, feature_and_labels)
     log.info(
         f"Trained model: r-squared={metrics.r_squared:.3f}, "
         f"MAE={metrics.mean_absolute_error:.3f}"
@@ -109,6 +110,34 @@ def train_model(
     return (best_model, performance_metrics)
 
 
+def verify_trained_model_logic(model: BaseEstimator, data: FeatureAndLabels) -> None:
+    """Verify that a trained model passes basic logical expectations."""
+    issues_detected: List[str] = []
+
+    orders_placed_sensitivity_checks = [
+        model.predict(array([[100, product], [110, product]])).tolist()
+        for product in range(len(CATEGORY_MAP))
+    ]
+    if not all(e[0] < e[1] for e in orders_placed_sensitivity_checks):
+        issues_detected.append(
+            "hours_to_dispatch predictions do not increase with orders_placed"
+        )
+
+    test_set_predictions = model.predict(preprocess(data.X_test)).reshape(-1)
+    if len(test_set_predictions[test_set_predictions < 0]) > 0:
+        issues_detected.append(
+            "negative hours_to_dispatch predictions found for test set"
+        )
+    if len(test_set_predictions[test_set_predictions > data.y_test.max() * 1.25]) > 0:
+        issues_detected.append(
+            "outlier hours_to_dispatch predictions found for test set"
+        )
+
+    if issues_detected:
+        msg = "Trained model failed verification: " + ", ".join(issues_detected) + "."
+        raise RuntimeError(msg)
+
+
 def preprocess(df: DataFrame) -> DataFrame:
     """Create features for training model."""
     df_processed = df.copy()
@@ -137,7 +166,7 @@ if __name__ == "__main__":
         r2_metric_error_threshold = float(args[2])
         if r2_metric_error_threshold <= 0 or r2_metric_error_threshold > 1:
             raise ValueError()
-        r2_metric_warning_threshold = float(args[2])
+        r2_metric_warning_threshold = float(args[3])
         if r2_metric_warning_threshold <= 0 or r2_metric_warning_threshold > 1:
             raise ValueError()
 
