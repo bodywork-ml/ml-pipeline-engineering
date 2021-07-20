@@ -7,7 +7,7 @@ import sys
 from typing import Any, Dict, List, NamedTuple, Tuple
 
 from bodywork_pipeline_utils import aws, logging
-from bodywork_pipeline_utils.aws.datasets import Dataset
+from bodywork_pipeline_utils.aws import Dataset
 from numpy import array, ndarray
 from pandas import DataFrame
 from sklearn.base import BaseEstimator
@@ -15,7 +15,7 @@ from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.tree import DecisionTreeRegressor
 
-CATEGORY_MAP = {"SKU001": 0, "SKU002": 1, "SKU003": 2, "SKU004": 3, "SKU005": 4}
+PRODUCT_CODE_MAP = {"SKU001": 0, "SKU002": 1, "SKU003": 2, "SKU004": 3, "SKU005": 4}
 HYPERPARAM_GRID = {
     "random_state": [42],
     "criterion": ["mse", "mae"],
@@ -115,8 +115,8 @@ def verify_trained_model_logic(model: BaseEstimator, data: FeatureAndLabels) -> 
     issues_detected: List[str] = []
 
     orders_placed_sensitivity_checks = [
-        model.predict(array([[100, product], [110, product]])).tolist()
-        for product in range(len(CATEGORY_MAP))
+        model.predict(array([[100, product], [150, product]])).tolist()
+        for product in range(len(PRODUCT_CODE_MAP))
     ]
     if not all(e[0] < e[1] for e in orders_placed_sensitivity_checks):
         issues_detected.append(
@@ -140,9 +140,9 @@ def verify_trained_model_logic(model: BaseEstimator, data: FeatureAndLabels) -> 
 
 def preprocess(df: DataFrame) -> DataFrame:
     """Create features for training model."""
-    df_processed = df.copy()
-    df_processed["product_code"] = df["product_code"].apply(lambda e: CATEGORY_MAP[e])
-    return df_processed.values
+    processed = df.copy()
+    processed["product_code"] = df["product_code"].apply(lambda e: PRODUCT_CODE_MAP[e])
+    return processed.values
 
 
 def persist_model(
@@ -152,7 +152,6 @@ def persist_model(
     metadata = {
         "r_squared": metrics.r_squared,
         "mean_absolute_error": metrics.mean_absolute_error,
-        "category_map": CATEGORY_MAP
     }
     wrapped_model = aws.Model("time-to-dispatch", model, dataset, metadata)
     s3_location = wrapped_model.put_model_to_s3(bucket, "models")
@@ -169,13 +168,13 @@ if __name__ == "__main__":
         r2_metric_warning_threshold = float(args[3])
         if r2_metric_warning_threshold <= 0 or r2_metric_warning_threshold > 1:
             raise ValueError()
-
     except (ValueError, IndexError):
         log.error(
             "Invalid arguments passed to train_model.py. "
             "Expected S3_BUCKET R_SQUARED_ERROR_THRESHOLD R_SQUARED_WARNING_THRESHOLD, "
             "where all thresholds must be in the range [0, 1]."
         )
+        sys.exit(1)
 
     try:
         main(

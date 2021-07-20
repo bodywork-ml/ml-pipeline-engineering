@@ -171,35 +171,40 @@ def test_run_job_handles_error_for_invalid_args():
     )
     assert process_one.returncode != 0
     assert "ERROR" in process_one.stdout
+    assert "Invalid arguments passed to train_model.py" in process_one.stdout
 
     process_two = run(
-        ["python", "pipeline/train_model.py", "my-bucket", "-1", "0.5"],
+        ["python", "-m", "pipeline.train_model", "my-bucket", "-1", "0.5"],
         capture_output=True,
         encoding="utf-8"
     )
     assert process_two.returncode != 0
     assert "ERROR" in process_two.stdout
+    assert "Invalid arguments passed to train_model.py" in process_two.stdout
 
     process_three = run(
-        ["python", "pipeline/train_model.py", "my-bucket", "2", "0.5"],
+        ["python", "-m", "pipeline.train_model", "my-bucket", "2", "0.5"],
         capture_output=True,
         encoding="utf-8"
     )
     assert process_three.returncode != 0
     assert "ERROR" in process_three.stdout
+    assert "Invalid arguments passed to train_model.py" in process_three.stdout
 
-    process_two = run(
-        ["python", "pipeline/train_model.py", "my-bucket", "0.5", "-1"],
+    process_four = run(
+        ["python", "-m", "pipeline.train_model", "my-bucket", "0.5", "-1"],
         capture_output=True,
         encoding="utf-8"
     )
-    assert process_two.returncode != 0
-    assert "ERROR" in process_two.stdout
+    assert process_four.returncode != 0
+    assert "ERROR" in process_four.stdout
+    assert "Invalid arguments passed to train_model.py" in process_four.stdout
 
-    process_three = run(
-        ["python", "pipeline/train_model.py", "my-bucket", "0.5", "2"],
+    process_five = run(
+        ["python", "-m", "pipeline.train_model", "my-bucket", "0.5", "2"],
         capture_output=True,
         encoding="utf-8"
     )
-    assert process_three.returncode != 0
-    assert "ERROR" in process_three.stdout
+    assert process_five.returncode != 0
+    assert "ERROR" in process_five.stdout
+    assert "Invalid arguments passed to train_model.py" in process_five.stdout
