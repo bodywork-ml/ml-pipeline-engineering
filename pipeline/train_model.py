@@ -56,7 +56,7 @@ def main(
 
     feature_and_labels = prepare_data(dataset.data)
     model, metrics = train_model(feature_and_labels, hyperparam_grid)
-    verify_trained_model_logic(model, feature_and_labels)
+    validate_trained_model_logic(model, feature_and_labels)
     log.info(
         f"Trained model: r-squared={metrics.r_squared:.3f}, "
         f"MAE={metrics.mean_absolute_error:.3f}"
@@ -110,7 +110,7 @@ def train_model(
     return (best_model, performance_metrics)
 
 
-def verify_trained_model_logic(model: BaseEstimator, data: FeatureAndLabels) -> None:
+def validate_trained_model_logic(model: BaseEstimator, data: FeatureAndLabels) -> None:
     """Verify that a trained model passes basic logical expectations."""
     issues_detected: List[str] = []
 

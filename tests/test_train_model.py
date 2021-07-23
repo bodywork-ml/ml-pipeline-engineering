@@ -21,7 +21,7 @@ from pipeline.train_model import (
     prepare_data,
     preprocess,
     train_model,
-    verify_trained_model_logic
+    validate_trained_model_logic
 )
 
 
@@ -87,7 +87,7 @@ def test_train_model_yields_model(dataset: Dataset):
         assert False
 
 
-def test_verify_trained_model_logic_raises_exception_for_failing_models(
+def test_validate_trained_model_logic_raises_exception_for_failing_models(
     dataset: Dataset
 ):
     prepared_data = FeatureAndLabels(
@@ -104,7 +104,7 @@ def test_verify_trained_model_logic_raises_exception_for_failing_models(
         "hours_to_dispatch predictions do not increase with orders_placed."
     )
     with raises(RuntimeError, match=expected_exception_str):
-        verify_trained_model_logic(dummy_model, prepared_data)
+        validate_trained_model_logic(dummy_model, prepared_data)
 
     dummy_model = DummyRegressor(strategy="constant", constant=-1.0)
     dummy_model.fit(prepared_data.X_train, prepared_data.y_train)
@@ -114,7 +114,7 @@ def test_verify_trained_model_logic_raises_exception_for_failing_models(
         "negative hours_to_dispatch predictions found for test set."
     )
     with raises(RuntimeError, match=expected_exception_str):
-        verify_trained_model_logic(dummy_model, prepared_data)
+        validate_trained_model_logic(dummy_model, prepared_data)
 
     dummy_model = DummyRegressor(strategy="constant", constant=1000.0)
     dummy_model.fit(prepared_data.X_train, prepared_data.y_train)
@@ -124,7 +124,7 @@ def test_verify_trained_model_logic_raises_exception_for_failing_models(
         "outlier hours_to_dispatch predictions found for test set."
     )
     with raises(RuntimeError, match=expected_exception_str):
-        verify_trained_model_logic(dummy_model, prepared_data)
+        validate_trained_model_logic(dummy_model, prepared_data)
 
 
 @patch("pipeline.train_model.aws")
