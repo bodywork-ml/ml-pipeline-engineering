@@ -85,13 +85,6 @@ def prepare_data(data: DataFrame) -> FeatureAndLabels:
     return FeatureAndLabels(X_train, X_test, y_train, y_test)
 
 
-def compute_metrics(y_true: ndarray, y_pred: ndarray) -> TaskMetrics:
-    """Compute performance metrics for the task and log them."""
-    mae = mean_absolute_error(y_true, y_pred)
-    r2 = r2_score(y_true, y_pred)
-    return TaskMetrics(r2, mae)
-
-
 def train_model(
     data: FeatureAndLabels, hyperparam_grid: Dict[str, Any]
 ) -> Tuple[BaseEstimator, TaskMetrics]:
@@ -106,7 +99,10 @@ def train_model(
     grid_search.fit(preprocess(data.X_train), data.y_train)
     best_model = grid_search.best_estimator_
     y_test_pred = best_model.predict(preprocess(data.X_test))
-    performance_metrics = compute_metrics(data.y_test, y_test_pred)
+    performance_metrics = TaskMetrics(
+        r2_score(data.y_test, y_test_pred),
+        mean_absolute_error(data.y_test, y_test_pred)
+    )
     return (best_model, performance_metrics)
 
 
