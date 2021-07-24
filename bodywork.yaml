@@ -6,19 +6,29 @@ project:
 stages:
   train_model:
     executable_module_path: pipeline/train_model.py
+    args: ["bodywork-time-to-dispatch", "0.9", "0.8"]
     requirements:
-      - git+https://github.com/bodywork-ml/bodywork-pipeline-utils@v0.1.0
+      - numpy==1.21.0
+      - pandas==1.2.5
+      - scikit-learn==0.24.2
+      - git+https://github.com/bodywork-ml/bodywork-pipeline-utils@v0.1.5
     cpu_request: 0.5
     memory_request_mb: 100
     batch:
       max_completion_time_seconds: 15
       retries: 2
+    secrets:
+      AWS_ACCESS_KEY_ID: aws-credentials
+      AWS_SECRET_ACCESS_KEY: aws-credentials
+      AWS_DEFAULT_REGION: aws-credentials
   serve_model:
     executable_module_path: pipeline/serve_model.py
+    args: ["bodywork-time-to-dispatch"]
     requirements:
+      - numpy==1.21.0
       - fastapi==0.65.2
       - uvicorn==0.14.0
-      - git+https://github.com/bodywork-ml/bodywork-pipeline-utils@v0.1.0
+      - git+https://github.com/bodywork-ml/bodywork-pipeline-utils@v0.1.5
     cpu_request: 0.25
     memory_request_mb: 100
     service:
@@ -26,5 +36,9 @@ stages:
       replicas: 2
       port: 8000
       ingress: true
+    secrets:
+      AWS_ACCESS_KEY_ID: aws-credentials
+      AWS_SECRET_ACCESS_KEY: aws-credentials
+      AWS_DEFAULT_REGION: aws-credentials
 logging:
   log_level: INFO
