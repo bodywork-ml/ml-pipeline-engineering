@@ -216,8 +216,8 @@ When deployed by Bodywork,  `train_model.py`will be executed in a dedicated cont
 stages:
   train_model:
     executable_module_path: pipeline/train_model.py
-	  args: ["time-to-dispatch", "0.9", "0.8"]
-	  ...
+      args: ["time-to-dispatch", "0.9", "0.8"]
+      ...
 ```
 
 ## Engineering the Model Training Job
