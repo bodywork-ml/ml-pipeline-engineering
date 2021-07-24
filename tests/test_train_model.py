@@ -19,7 +19,7 @@ from pipeline.train_model import (
     prepare_data,
     preprocess,
     train_model,
-    validate_trained_model_logic
+    validate_trained_model_logic,
 )
 
 
@@ -36,7 +36,7 @@ def prepared_data(dataset: Dataset) -> FeatureAndLabels:
         dataset.data[["orders_placed", "product_code"]][:800],
         dataset.data[["orders_placed", "product_code"]][800:999],
         dataset.data["hours_to_dispatch"][:800],
-        dataset.data["hours_to_dispatch"][800:999]
+        dataset.data["hours_to_dispatch"][800:999],
     )
 
 
@@ -58,11 +58,15 @@ def test_prepare_data_splits_labels_and_features_into_test_and_train(dataset: Da
     assert prepared_data.y_test.ndim == 1
     assert prepared_data.y_test.name == label_column
 
-    assert (prepared_data.X_train.shape[0] + prepared_data.X_test.shape[0]
-            == n_rows_in_dataset)
+    assert (
+        prepared_data.X_train.shape[0] + prepared_data.X_test.shape[0]
+        == n_rows_in_dataset
+    )
 
-    assert (prepared_data.y_train.shape[0] + prepared_data.y_test.shape[0]
-            == n_rows_in_dataset)
+    assert (
+        prepared_data.y_train.shape[0] + prepared_data.y_test.shape[0]
+        == n_rows_in_dataset
+    )
 
 
 def test_preprocess_processes_features():
@@ -85,7 +89,7 @@ def test_train_model_yields_model_and_metrics(prepared_data: FeatureAndLabels):
 
 
 def test_validate_trained_model_logic_raises_exception_for_failing_models(
-    prepared_data: FeatureAndLabels
+    prepared_data: FeatureAndLabels,
 ):
     dummy_model = DummyRegressor(strategy="constant", constant=-1.0)
     dummy_model.fit(prepared_data.X_train, prepared_data.y_train)
@@ -166,7 +170,7 @@ def test_run_job_handles_error_for_invalid_args():
     process_two = run(
         ["python", "-m", "pipeline.train_model", "my-bucket", "-1", "0.5"],
         capture_output=True,
-        encoding="utf-8"
+        encoding="utf-8",
     )
     assert process_two.returncode != 0
     assert "ERROR" in process_two.stdout
@@ -175,7 +179,7 @@ def test_run_job_handles_error_for_invalid_args():
     process_three = run(
         ["python", "-m", "pipeline.train_model", "my-bucket", "2", "0.5"],
         capture_output=True,
-        encoding="utf-8"
+        encoding="utf-8",
     )
     assert process_three.returncode != 0
     assert "ERROR" in process_three.stdout
@@ -184,7 +188,7 @@ def test_run_job_handles_error_for_invalid_args():
     process_four = run(
         ["python", "-m", "pipeline.train_model", "my-bucket", "0.5", "-1"],
         capture_output=True,
-        encoding="utf-8"
+        encoding="utf-8",
     )
     assert process_four.returncode != 0
     assert "ERROR" in process_four.stdout
@@ -193,7 +197,7 @@ def test_run_job_handles_error_for_invalid_args():
     process_five = run(
         ["python", "-m", "pipeline.train_model", "my-bucket", "0.5", "2"],
         capture_output=True,
-        encoding="utf-8"
+        encoding="utf-8",
     )
     assert process_five.returncode != 0
     assert "ERROR" in process_five.stdout

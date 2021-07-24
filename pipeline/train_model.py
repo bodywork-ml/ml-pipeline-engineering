@@ -47,7 +47,7 @@ def main(
     s3_bucket: str,
     metric_error_threshold: float,
     metric_warning_threshold: float,
-    hyperparam_grid: Dict[str, Any]
+    hyperparam_grid: Dict[str, Any],
 ) -> None:
     """Main training job."""
     log.info("Starting train-model stage.")
@@ -101,7 +101,7 @@ def train_model(
     y_test_pred = best_model.predict(preprocess(data.X_test))
     performance_metrics = TaskMetrics(
         r2_score(data.y_test, y_test_pred),
-        mean_absolute_error(data.y_test, y_test_pred)
+        mean_absolute_error(data.y_test, y_test_pred),
     )
     return (best_model, performance_metrics)
 
@@ -177,7 +177,7 @@ if __name__ == "__main__":
             s3_bucket,
             r2_metric_error_threshold,
             r2_metric_warning_threshold,
-            HYPERPARAM_GRID
+            HYPERPARAM_GRID,
         )
     except Exception as e:
         log.error(f"Error encountered when training model - {e}")
