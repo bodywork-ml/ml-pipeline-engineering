@@ -30,6 +30,16 @@ def dataset() -> Dataset:
     return dataset
 
 
+@fixture(scope="session")
+def prepared_data(dataset: Dataset) -> FeatureAndLabels:
+    return FeatureAndLabels(
+        dataset.data[["orders_placed", "product_code"]][:800],
+        dataset.data[["orders_placed", "product_code"]][800:999],
+        dataset.data["hours_to_dispatch"][:800],
+        dataset.data["hours_to_dispatch"][800:999]
+    )
+
+
 def test_prepare_data_splits_labels_and_features_into_test_and_train(dataset: Dataset):
     label_column = "hours_to_dispatch"
     n_rows_in_dataset = dataset.data.shape[0]
@@ -55,20 +65,14 @@ def test_prepare_data_splits_labels_and_features_into_test_and_train(dataset: Da
             == n_rows_in_dataset)
 
 
-def test_preprocess_processes_features(dataset: Dataset):
+def test_preprocess_processes_features():
     data = DataFrame({"orders_placed": [30], "product_code": ["SKU004"]})
     processed_data = preprocess(data)
     assert processed_data[0, 0] == 30
     assert processed_data[0, 1] == 3
 
 
-def test_train_model_yields_model_and_metrics(dataset: Dataset):
-    prepared_data = FeatureAndLabels(
-        dataset.data[["orders_placed", "product_code"]][:800],
-        dataset.data[["orders_placed", "product_code"]][800:999],
-        dataset.data["hours_to_dispatch"][:800],
-        dataset.data["hours_to_dispatch"][800:999]
-    )
+def test_train_model_yields_model_and_metrics(prepared_data: FeatureAndLabels):
     model, metrics = train_model(prepared_data, {"random_state": [42]})
     try:
         check_is_fitted(model)
@@ -81,15 +85,8 @@ def test_train_model_yields_model_and_metrics(dataset: Dataset):
 
 
 def test_validate_trained_model_logic_raises_exception_for_failing_models(
-    dataset: Dataset
+    prepared_data: FeatureAndLabels
 ):
-    prepared_data = FeatureAndLabels(
-        dataset.data[["orders_placed", "product_code"]][:10],
-        dataset.data[["orders_placed", "product_code"]][10:20],
-        dataset.data["hours_to_dispatch"][:10],
-        dataset.data["hours_to_dispatch"][10:20]
-    )
-
     dummy_model = DummyRegressor(strategy="constant", constant=-1.0)
     dummy_model.fit(prepared_data.X_train, prepared_data.y_train)
     expected_exception_str = (

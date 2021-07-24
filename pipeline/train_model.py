@@ -8,7 +8,7 @@ from typing import Any, Dict, List, NamedTuple, Tuple
 
 from bodywork_pipeline_utils import aws, logging
 from bodywork_pipeline_utils.aws import Dataset
-from numpy import array, ndarray
+from numpy import array
 from pandas import DataFrame
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import GridSearchCV, train_test_split
