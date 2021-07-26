@@ -13,7 +13,7 @@ In this part we are going to focus on developing a fully-operational pipeline an
 - Updating the deployment configuration and releasing the changes to production.
 - Scheduling the pipeline to run on a schedule.
 
-All of the code referred to in this series of posts is available on  [GitHub](https://github.com/bodywork-ml/ml-pipeline-engineering) , with a dedicated branch for each part, so you can explore the code in its various stages of development. Have a quick look before reading on.
+All of the code referred to in this series of posts is available on  [GitHub](https://github.com/bodywork-ml/ml-pipeline-engineering), with a dedicated branch for each part, so you can explore the code in its various stages of development. Have a quick look before reading on.
 
 ## A Simple Strategy for Dataset and Model Versioning
 
@@ -43,9 +43,9 @@ s3://time-to-dispatch/
     |-- ...
 ```
 
-When triggered, the serve-model stage of the pipeline will only need to download the most recently persisted model, to ensure that it will generate predictions using the model from the output of the train-model stage. As with the datasets, we could stop here and rely solely on the filenames as a lightweight versioning strategy, but auditing and debugging predictions will be made much easier if we can access model metadata, such as the details the of exact dataset used for training.
+When triggered, the serve-model stage of the pipeline will only need to download the most recently persisted model, to ensure that it will generate predictions using the model from the output of the train-model stage. As with the datasets, we could stop here and rely solely on the filenames as a lightweight versioning strategy, but auditing and debugging predictions will be made much easier if we can access model metadata, such as the details of the exact dataset used for training.
 
-The concept of a model becomes bigger than just the trained model in isolation, so we will also need to develop a custom `Model` class. This needs to ‘wrap’ the trained model object, so that it can be associated with all of the metadata that we need to operate our basic model versioning system. As with the custom `Dataset` class, we will need to develop functions/methods for getting and putting `Model` object to S3.
+The concept of a model becomes bigger than just the trained model in isolation, so we will also need to develop a custom `Model` class. This needs to ‘wrap’ the trained model object, so that it can be associated with all of the metadata that we need to operate our basic model versioning system. As with the custom `Dataset` class, we will need to develop functions/methods for getting and putting the `Model` object to S3.
 
 There is a significant development effort required for implementing the functionality described above and it is likely that this will be repeated in many projects. We are going to cover how to handle reusable code in the section below, but you can see our implementations for the `Dataset` and `Model` classes using the links below, which we have also reproduced at the end of this article.
 
@@ -85,7 +85,7 @@ Where `v0.1.5` is the release tag, but could also be a Git commit hash. This wil
 git+https://github.com/bodywork-ml/bodywork-pipeline-utils@v0.1.5
 ```
 
-Pip supports many VCSs and protocols - e.g., private Git repositories can be accessed via SSH by using `git+ssh` and ensuring that the machine making the request has the appropriate SSH keys available. Refer to the [documentation for pip](https://pip.pypa.io/en/stable/cli/pip_install/#vcs-support) for more information.
+Pip supports many VCSs and protocols - e.g. private Git repositories can be accessed via SSH by using `git+ssh` and ensuring that the machine making the request has the appropriate SSH keys available. Refer to the [documentation for pip](https://pip.pypa.io/en/stable/cli/pip_install/#vcs-support) for more information.
 
 ## Defending Against Errors and Handling Failures
 
@@ -122,7 +122,7 @@ if __name__ == "__main__":
 
 The pipeline is defined in the `main` function, which is executed within a `try... except` block. If it executes without error, then we signal this to Kubernetes with an exit-code of `0` . If any error is encountered, then the exception is caught, we log the details and signal this to Kubernetes with an exit-code of `1` (so it can attempt a retry, if this has been configured).
 
-Exceptions within `main` are likely to be raised from within 3rd party packages that we’ve installed - e.g. if `bodywork-pipeline-utils` can’t access AWS or if Scikit-Learn fails to train a model. We recommend reading the documentation (or source code) for external functions and classes, to understand what exceptions they raise and if the pipeline would benefit from custom handling and logging.
+Exceptions within `main` are likely to be raised from within 3rd party packages that we’ve installed - e.g. if `bodywork-pipeline-utils` can’t access AWS or if Scikit-Learn fails to train a model. We recommend reading the documentation (or source code) for external functions and classes to understand what exceptions they raise and if the pipeline would benefit from custom handling and logging.
 
 Sometimes, however, we need to look for the error ourselves and raise the exception manually, as shown below when the key test metric falls below a pre-configured threshold level,
 
@@ -151,7 +151,7 @@ def main(
         raise RuntimeError(msg)
 ```
 
-The works as follows:
+This works as follows:
 
 - If the r-squared metric is above the error threshold and the warning threshold, then persist the trained model.
 - If the r-squared metric is above the error threshold, but below the warning threshold, then log a warning message and then persist the trained model.
@@ -349,7 +349,7 @@ def test_prepare_data_splits_labels_and_features_into_test_and_train(dataset: Da
             == n_rows_in_dataset)
 ```
 
-To help with testing, we have saved a snapshot of CSV data to `tests/resources/dataset.csv` within the project repository, and made it available as a `DataFrame` to all tests in this model, via a [Pytest fixture](https://docs.pytest.org/en/6.2.x/fixture.html) called `dataset`. There is only one unit test for this function and it tests that `prepare_data` splits labels from features, for both  ‘test’ and ‘train’ sets, and that it doesn’t loose any rows of data in the process. It we refactor `prepare_data` in the future, then this test will help prevent us from accidentally leaking the label into the features.
+To help with testing, we have saved a snapshot of CSV data to `tests/resources/dataset.csv` within the project repository, and made it available as a `DataFrame` to all tests in this model, via a [Pytest fixture](https://docs.pytest.org/en/6.2.x/fixture.html) called `dataset`. There is only one unit test for this function and it tests that `prepare_data` splits labels from features, for both  ‘test’ and ‘train’ sets, and that it doesn’t lose any rows of data in the process. If we refactor `prepare_data` in the future, then this test will help prevent us from accidentally leaking the label into the features.
 
 ### Train Model
 
@@ -530,11 +530,11 @@ def test_validate_trained_model_logic_raises_exception_for_failing_models(
 
 ### End-to-End Functional Tests
 
-We’ve tested the individual sub-tasks within `main` , but how to we know that we’ve assembled them correctly, so that `persist_model` will upload the expected `Model` object to cloud storage? We now need to turn our attention to testing `main`fro mend-to-end - i.e. functional tests for the train-model stage.
+We’ve tested the individual sub-tasks within `main` , but how do we know that we’ve assembled them correctly, so that `persist_model` will upload the expected `Model` object to cloud storage? We now need to turn our attention to testing `main`from end-to-end - i.e. functional tests for the train-model stage.
 
-The `main` function will try to access AWS S3 to get a dataset and put a pickled `Model`. We could setup a S3 bucket for testing this integration, but this constitutes an integration test and is not our current aim. We will disable the calls to AWS by mocking the `bodywork_pipeline_utils.aws` module using the `patch` function from the Python standard library’s [unittest.mock](https://docs.python.org/3/library/unittest.mock.html) module. 
+The `main` function will try to access AWS S3 to get a dataset and then save a pickled `Model` to S3. We could setup a S3 bucket for testing this integration, but this constitutes an integration test and is not our current aim. We will disable the calls to AWS by mocking the `bodywork_pipeline_utils.aws` module using the `patch` function from the Python standard library’s [unittest.mock](https://docs.python.org/3/library/unittest.mock.html) module. 
 
-Decorating our test with `@patch("pipeline.train_model.aws")`, causes `bodywork_pipeline_utils.aws`, which we import into `train_model.py`, to be replaced by a `MagicMock` object called `mock_aws`. This allows us to perform a number of useful tasks:
+Decorating our test with `@patch("pipeline.train_model.aws")`, causes `bodywork_pipeline_utils.aws` (which we import into `train_model.py`) to be replaced by a `MagicMock` object called `mock_aws`. This allows us to perform a number of useful tasks:
 
 - Hard-code the return value from `aws.get_latest_csv_dataset_from_s3`, so that it returns our local test dataset instead of a remote dataset on S3.
 - Check if the `put_model_to_s3`method of the `aws.Model` object created in `persist_model`, was called.
@@ -618,7 +618,7 @@ def test_run_job_handles_error_for_invalid_args():
 
 ## Developing the Model Serving Stage
 
-In Part One of this series we developed a skeleton web service that returned a hard-coded value whenever the API was called. Our task in this part is to extend this to downloading the latest model persisted to cloud object storage (AWS S3), and then use the model for generating predictions. Unlike the train-model stage, this effort required for this task is relatively small and so we will reproduce `serve_model.py` in full and then discuss it in more detail afterwards.
+In Part One of this series we developed a skeleton web service that returned a hard-coded value whenever the API was called. Our task in this part is to extend this to downloading the latest model persisted to cloud object storage (AWS S3), and then use the model for generating predictions. Unlike the train-model stage, the effort required for this task is relatively small and so we will reproduce `serve_model.py` in full and then discuss it in more detail afterwards.
 
 ```python
 import sys
