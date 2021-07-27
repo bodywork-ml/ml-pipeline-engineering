@@ -22,9 +22,9 @@ To recap, the data engineering team will deliver the latest tranche of training 
 ```text
 s3://time-to-dispatch/
 |-- datasets/
-	  |-- time_to_dispatch_2021-07-03T23:05:32.csv
-	  |-- time_to_dispatch_2021-07-02T23:05:13.csv
-	  |-- time_to_dispatch_2021-07-01T23:04:52.csv
+    |-- time_to_dispatch_2021-07-03T23:05:32.csv
+    |-- time_to_dispatch_2021-07-02T23:05:13.csv
+    |-- time_to_dispatch_2021-07-01T23:04:52.csv
     |-- ...
 ```
 
@@ -37,9 +37,9 @@ Trained models will be serialised to file using Python’s [pickle](https://docs
 ```text
 s3://time-to-dispatch/
 |-- models/
-	  |-- time_to_dispatch_2021-07-03T23:45:23.csv
-	  |-- time_to_dispatch_2021-07-02T23:45:31.csv
-	  |-- time_to_dispatch_2021-07-01T23:44:25.csv
+    |-- time_to_dispatch_2021-07-03T23:45:23.csv
+    |-- time_to_dispatch_2021-07-02T23:45:31.csv
+    |-- time_to_dispatch_2021-07-01T23:44:25.csv
     |-- ...
 ```
 
@@ -136,7 +136,7 @@ def main(
     """Main training job."""
     log.info("Starting train-model stage.")
 
-	  # ...
+    # ...
 
     if metrics.r_squared >= metric_error_threshold:
         if metrics.r_squared >= metric_warning_threshold:
@@ -163,7 +163,7 @@ Using logs to communicate pipeline state will take on additional importance late
 
 Pipelines can benefit from parametrisation to make them re-usable across deployment environments (and potentially tenants, if this makes sense for your project). For example, passing the S3 bucket as an external argument to each stage, enables the pipeline to operate both in a staging environment, as well as in production. Similarly, external arguments can be used to set thresholds for defining when warnings and alerts are triggered, based on model training metrics, which can make testing the pipeline much easier.
 
-Each stage of our pipeline is defined by an executable Python module.  The easiest way to pass arguments to a module is via the command line. For example, 
+Each stage of our pipeline is defined by an executable Python module.  The easiest way to pass arguments to a module is via the command line. For example,
 
 ```text
 $ python -m pipeline.train_model time-to-dispatch 0.9 0.8
@@ -222,7 +222,7 @@ stages:
 
 ## Engineering the Model Training Job
 
-The core task here is to engineer the ML solution in the [time_to_dispatch_model.ipynb notebook](https://github.com/bodywork-ml/ml-pipeline-engineering/blob/master/notebooks/time_to_dispatch_model.ipynb),  provided to us by the data scientist who worked on this task, into the pipeline stage defined in [pipeline/train_model.py](https://github.com/bodywork-ml/ml-pipeline-engineering/blob/part-two/pipeline/train_model.py) (reproduced in the Appendix below). The central workflow is defined in the `main`function,
+The core task here is to engineer the ML solution in the [time_to_dispatch_model.ipynb notebook](https://github.com/bodywork-ml/ml-pipeline-engineering/blob/master/notebooks/time_to_dispatch_model.ipynb),  provided to us by the data scientist who worked on this task, into the pipeline stage defined in [pipeline/train_model.py](https://github.com/bodywork-ml/ml-pipeline-engineering/blob/part-two/pipeline/train_model.py) (reproduced in the Appendix below). The central workflow is defined in the `main` function,
 
 ```python
 from typing import Any, Dict, List, NamedTuple, Tuple
@@ -434,7 +434,7 @@ Which tests that `train_model` returns a fitted model and acceptable performance
 
 Note, that we haven’t relied on `prepare_data` to create the `FeatureAndLabels object`- we have created this manually in another fixture that relies on the `dataset` fixture discussed earlier. This is a deliberate choice made with the aim of decoupling the outcome of this test from the behaviour of `prepare_data`. Tests that are dependent on multiple functions can be ‘brittle’ and lead to cascades of failing tests when only a single function or method is raising an error. We cannot stress enough how important it is to structure your code in such a way that it can be easily tested.
 
-For completeness, we also provide a simple test for `preprocess`, 
+For completeness, we also provide a simple test for `preprocess`,
 
 ```python
 from pandas import read_csv, DataFrame
@@ -530,9 +530,9 @@ def test_validate_trained_model_logic_raises_exception_for_failing_models(
 
 ### End-to-End Functional Tests
 
-We’ve tested the individual sub-tasks within `main` , but how do we know that we’ve assembled them correctly, so that `persist_model` will upload the expected `Model` object to cloud storage? We now need to turn our attention to testing `main`from end-to-end - i.e. functional tests for the train-model stage.
+We’ve tested the individual sub-tasks within `main` , but how do we know that we’ve assembled them correctly, so that `persist_model` will upload the expected `Model` object to cloud storage? We now need to turn our attention to testing `main` from end-to-end - i.e. functional tests for the train-model stage.
 
-The `main` function will try to access AWS S3 to get a dataset and then save a pickled `Model` to S3. We could setup a S3 bucket for testing this integration, but this constitutes an integration test and is not our current aim. We will disable the calls to AWS by mocking the `bodywork_pipeline_utils.aws` module using the `patch` function from the Python standard library’s [unittest.mock](https://docs.python.org/3/library/unittest.mock.html) module. 
+The `main` function will try to access AWS S3 to get a dataset and then save a pickled `Model` to S3. We could setup a S3 bucket for testing this integration, but this constitutes an integration test and is not our current aim. We will disable the calls to AWS by mocking the `bodywork_pipeline_utils.aws` module using the `patch` function from the Python standard library’s [unittest.mock](https://docs.python.org/3/library/unittest.mock.html) module.
 
 Decorating our test with `@patch("pipeline.train_model.aws")`, causes `bodywork_pipeline_utils.aws` (which we import into `train_model.py`) to be replaced by a `MagicMock` object called `mock_aws`. This allows us to perform a number of useful tasks:
 
@@ -684,7 +684,7 @@ if __name__ == "__main__":
 The key changes from the version in Part One are as follows:
 
 - We now pass the name of the AWS S3 bucket as an argument to `serve_model.py`.
-- In the `if __name__ == "__main__":` block we now attempt to to retrieve latest `Model` object that was persisted to AWS S3, before starting the FastAPI server.
+- In the `if __name__ == "__main__"` block we now attempt to to retrieve latest `Model` object that was persisted to AWS S3, before starting the FastAPI server.
 - We placed a new constraint on the `Data.orders_placed` field to ensure that all values sent to the API must be greater-than-or-equal-to zero, and another new constraint on `Data.product_code` that forces this field to be one of the values specified in the `ProductCode` [enumeration](https://docs.python.org/3/library/enum.html).
 - We now use the model to generate predictions, using the `PRODUCT_CODE_MAP` dictionary from `train_model.py` to map product codes to integers, before calling the model.
 - We use the string representation of the `Model` object in the response’s `model_version` field, which contains the full information on which S3 object is being used, as well as other metadata such as the dataset used to train the model, the type of model, etc. This verbose information is designed to facilitate easy debugging of problematic responses.
@@ -722,7 +722,7 @@ Which should return a response along the lines of,
 
 ### Updating the Tests
 
-We only need to add one more (small) test to [tests/test_serve_model.py](https://github.com/bodywork-ml/ml-pipeline-engineering/blob/part-two/tests/test_serve_model.py), but we will have to modify the existing tests to take into account that we are now using a trained model to generate predictions, as opposed to returning fixed values. This introduces a complication, because we need to inject a working model into the module. 
+We only need to add one more (small) test to [tests/test_serve_model.py](https://github.com/bodywork-ml/ml-pipeline-engineering/blob/part-two/tests/test_serve_model.py), but we will have to modify the existing tests to take into account that we are now using a trained model to generate predictions, as opposed to returning fixed values. This introduces a complication, because we need to inject a working model into the module.
 
 To facilitate testing, we have persisted a valid `Model` object to `tests/resources/model.pkl`, which will be loaded in a function called `wrapped_model` and injected into the module at test-time as a new object, using `unittest.mock.patch`. We are unable to use `patch` as we did in `train_model.py`, because the model is only loaded when `serve_model.py` is executed, whereas our tests rely only the FastAPI test client.
 
@@ -901,7 +901,7 @@ bodywork cronjob create \
 
 ## Wrap-Up
 
-In this second part we have gone from a skeleton “Hello, Production!” deployment to a fully-funtional train-and-deploy pipeline, that automates re-training and re-deployment in a production environment, on a periodic basis. We have factored-out common code so that it can be re-used across projects and discussed various strategies for developing automated tests for both stages of the pipeline, ensuring that subsequent modifications can be reliably integrated and deployed, with relative ease.
+In this second part we have gone from a skeleton “Hello, Production!” deployment to a fully-functional train-and-deploy pipeline, that automates re-training and re-deployment in a production environment, on a periodic basis. We have factored-out common code so that it can be re-used across projects and discussed various strategies for developing automated tests for both stages of the pipeline, ensuring that subsequent modifications can be reliably integrated and deployed, with relative ease.
 
 In the final part of this series we will cover monitoring and observability and aim to to answer the question, “*How will I know when something has gone wrong?*”.
 
