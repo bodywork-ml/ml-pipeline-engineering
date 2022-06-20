@@ -819,7 +819,7 @@ pipeline:
 stages:
   train_model:
     executable_module_path: pipeline/train_model.py
-    args: ["bodywork-time-to-dispatch", "0.9", "0.8"]
+    args: ["time-to-dispatch", "0.9", "0.8"]
     requirements:
       - numpy>=1.21.0
       - pandas>=1.2.5
@@ -828,7 +828,7 @@ stages:
     cpu_request: 1.0
     memory_request_mb: 500
     batch:
-      max_completion_time_seconds: 120
+      max_completion_time_seconds: 180
       retries: 2
     secrets:
       AWS_ACCESS_KEY_ID: aws-credentials
@@ -836,7 +836,7 @@ stages:
       AWS_DEFAULT_REGION: aws-credentials
   serve_model:
     executable_module_path: pipeline/serve_model.py
-    args: ["bodywork-time-to-dispatch"]
+    args: ["time-to-dispatch"]
     requirements:
       - numpy>=1.21.0
       - scikit-learn>=0.24.2
