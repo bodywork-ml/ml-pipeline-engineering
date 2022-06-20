@@ -18,7 +18,7 @@ from sklearn.tree import DecisionTreeRegressor
 PRODUCT_CODE_MAP = {"SKU001": 0, "SKU002": 1, "SKU003": 2, "SKU004": 3, "SKU005": 4}
 HYPERPARAM_GRID = {
     "random_state": [42],
-    "criterion": ["mse", "mae"],
+    "criterion": ["squared_error", "absolute_error"],
     "max_depth": [2, 3, 4, 5, 6, 7, 8, 9, 10, None],
     "min_samples_split": [2, 3, 4, 5, 6, 7, 8, 9, 10],
     "min_samples_leaf": [2, 3, 4, 5, 6, 7, 8, 9, 10],
