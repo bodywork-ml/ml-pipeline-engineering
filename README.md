@@ -208,7 +208,7 @@ if __name__ == "__main__":
 
 Note how we cast the numeric arguments to `float` types before performing basic input validation to ensure that users can’t accidentally specify invalided arguments that could lead to unintended consequences.
 
-When deployed by Bodywork,  `train_model.py`will be executed in a dedicated container on Kubernetes. The required arguments can be passed via the `args` parameter in the `bodywork.yaml` file that describes the deployment, as shown below.
+When deployed by Bodywork,  `train_model.py` will be executed in a dedicated container on Kubernetes. The required arguments can be passed via the `args` parameter in the `bodywork.yaml` file that describes the deployment, as shown below.
 
 ```yaml
 # bodywork.yaml
@@ -692,7 +692,7 @@ The key changes from the version in Part One are as follows:
 If we start the server locally,
 
 ```text
-$ python -m pipeline.serve_model "bodywork-time-to-dispatch"
+$ python -m pipeline.serve_model time-to-dispatch
 
 2021-07-24 09:56:42,718 - INFO - serve_model.<module> - Successfully loaded model: name:time-to-dispatch|model_type:<class 'sklearn.tree._classes.DecisionTreeRegressor'>|model_timestamp:2021-07-20 14:44:13.558375|model_hash:b4860f56fa24193934fe1ea51b66818d|train_dataset_key:datasets/time_to_dispatch_2021-07-01T16|45|38.csv|train_dataset_hash:"759eccda4ceb7a07cda66ad4ef7cdfbc"|pipeline_git_commit_hash:NA
 2021-07-24 09:56:42,718 - INFO - serve_model.<module> - Successfully loaded model: name:time-to-dispatch|model_type:<class 'sklearn.tree._classes.DecisionTreeRegressor'>|model_timestamp:2021-07-20 14:44:13.558375|model_hash:b4860f56fa24193934fe1ea51b66818d|train_dataset_key:datasets/time_to_dispatch_2021-07-01T16|45|38.csv|train_dataset_hash:"759eccda4ceb7a07cda66ad4ef7cdfbc"|pipeline_git_commit_hash:NA
@@ -808,43 +808,46 @@ The last task we need to complete before we can commit all changes, push to GitH
 - Arguments now need to be passed to each stage.
 - The Python package requirements for each stage need to be updated.
 - AWS credentials need to be injected into each stage, as required by `bodywork_pipeline_utils.aws`.
+- CPU and memory resources need to be updated, together with max completion/startup timeouts.
 
 ```yaml
-version: "1.0"
-project:
+version: "1.1"
+pipeline:
   name: time-to-dispatch
-  docker_image: bodyworkml/bodywork-core:2.1.7
+  docker_image: bodyworkml/bodywork-core:3.0
   DAG: train_model >> serve_model
+  secrets_group: dev
 stages:
   train_model:
     executable_module_path: pipeline/train_model.py
-    args: ["bodywork-time-to-dispatch", "0.9", "0.8"]
+    args: ["time-to-dispatch", "0.9", "0.8"]
     requirements:
-      - numpy==1.21.0
-      - pandas==1.2.5
-      - scikit-learn==0.24.2
+      - numpy>=1.21.0
+      - pandas>=1.2.5
+      - scikit-learn>=1.0.0
       - git+https://github.com/bodywork-ml/bodywork-pipeline-utils@v0.1.5
-    cpu_request: 0.5
-    memory_request_mb: 100
+    cpu_request: 1.0
+    memory_request_mb: 1000
     batch:
-      max_completion_time_seconds: 15
-      retries: 2
+      max_completion_time_seconds: 180
+      retries: 1
     secrets:
       AWS_ACCESS_KEY_ID: aws-credentials
       AWS_SECRET_ACCESS_KEY: aws-credentials
       AWS_DEFAULT_REGION: aws-credentials
   serve_model:
     executable_module_path: pipeline/serve_model.py
-    args: ["bodywork-time-to-dispatch"]
+    args: ["time-to-dispatch"]
     requirements:
-      - numpy==1.21.0
-      - fastapi==0.65.2
-      - uvicorn==0.14.0
+      - numpy>=1.21.0
+      - scikit-learn>=1.0.0
+      - fastapi>=0.65.2
+      - uvicorn>=0.14.0
       - git+https://github.com/bodywork-ml/bodywork-pipeline-utils@v0.1.5
-    cpu_request: 0.25
-    memory_request_mb: 100
+    cpu_request: 0.5
+    memory_request_mb: 250
     service:
-      max_startup_time_seconds: 15
+      max_startup_time_seconds: 180
       replicas: 2
       port: 8000
       ingress: true
@@ -859,12 +862,11 @@ logging:
 This will instruct Bodywork to look for `AWS_ACCESS_KEY_ID`,  `AWS_SECRET_ACCESS_KEY` and `AWS_DEFAULT_REGION` in a secret record called `aws-credentials`, so that it can inject these secrets into the containers running the stages of our pipeline (as environment variables that will be detected silently). So, these will have to be created, which can be done as follows,
 
 ```text
-$ bodywork secret create \
-    --namespace=pipelines \
-    --name=aws-credentials \
+$ bw create secret aws-credentials \
+    --group=dev \
     --data AWS_ACCESS_KEY_ID=put-your-key-in-here \
-           AWS_SECRET_ACCESS_KEY=put-your-other-key-in-here \
-           AWS_DEFAULT_REGION=wherever-your-cluster-is
+    --data AWS_SECRET_ACCESS_KEY=put-your-other-key-in-here \
+    --data AWS_DEFAULT_REGION=wherever-your-cluster-is
 ```
 
 Now you’re ready to push this branch to your remote Git repo! If your tests pass and your colleagues approve the merge, the CD part of the CI/CD pipeline we setup in Part One will ensure the new pipeline is deployed to Kubernetes by Bodywork and executed immediately. Bodywork will perform a rolling-deployment that will ensure zero down-time and automatically roll-back failed deployments to the previous version. When Bodywork has finished, test the new web API,
@@ -885,18 +887,18 @@ Where you should observe the same response you received when testing locally,
 }
 ```
 
+See our guide to [accessing services](https://bodywork.readthedocs.io/en/latest/kubernetes/#accessing-services) for information on how to determine `CLUSTER_IP`.
+
 ## Scheduling the Pipeline to run on a Schedule
 
 At this point, the pipeline will have deployed a model using the most recent dataset made available for this task. We know, however, that new data will arrive every Friday evening and so we’d like to schedule the pipeline to run just after the data is expected. We can achieve this using Bodywork cronjobs, as follows,
 
 ```text
-bodywork cronjob create \
-    --namespace=pipelines \
+$ bw create cronjob https://github.com/bodywork-ml/ml-pipeline-engineering \
     --name=weekly-update \
-    --schedule="0 45 * * *" \
-    --git-repo-url=https://github.com/bodywork-ml/ml-pipeline-engineering \
-    --git-repo-branch=master \
-	  --retries=2
+    --branch master \
+    --schedule="45 11 * * 5" \
+	--retries=2
 ```
 
 ## Wrap-Up
@@ -1179,7 +1181,7 @@ from typing import Any, Dict, List, NamedTuple, Tuple
 
 from bodywork_pipeline_utils import aws, logging
 from bodywork_pipeline_utils.aws import Dataset
-from numpy import array, ndarray
+from numpy import array
 from pandas import DataFrame
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import GridSearchCV, train_test_split
@@ -1189,10 +1191,10 @@ from sklearn.tree import DecisionTreeRegressor
 PRODUCT_CODE_MAP = {"SKU001": 0, "SKU002": 1, "SKU003": 2, "SKU004": 3, "SKU005": 4}
 HYPERPARAM_GRID = {
     "random_state": [42],
-    "criterion": ["mse", "mae"],
-    "max_depth": [2, 3, 4, 5, 6, 7, 8, 9, 10, None],
-    "min_samples_split": [2, 3, 4, 5, 6, 7, 8, 9, 10],
-    "min_samples_leaf": [2, 3, 4, 5, 6, 7, 8, 9, 10],
+    "criterion": ["squared_error", "absolute_error"],
+    "max_depth": [2, 4, 6, 8, 10, None],
+    "min_samples_split": [2, 4, 6, 8, 10],
+    "min_samples_leaf": [2, 4, 6, 8, 10],
 }
 
 log = logging.configure_logger()
@@ -1218,7 +1220,7 @@ def main(
     s3_bucket: str,
     metric_error_threshold: float,
     metric_warning_threshold: float,
-    hyperparam_grid: Dict[str, Any]
+    hyperparam_grid: Dict[str, Any],
 ) -> None:
     """Main training job."""
     log.info("Starting train-model stage.")
@@ -1256,13 +1258,6 @@ def prepare_data(data: DataFrame) -> FeatureAndLabels:
     return FeatureAndLabels(X_train, X_test, y_train, y_test)
 
 
-def compute_metrics(y_true: ndarray, y_pred: ndarray) -> TaskMetrics:
-    """Compute performance metrics for the task and log them."""
-    mae = mean_absolute_error(y_true, y_pred)
-    r2 = r2_score(y_true, y_pred)
-    return TaskMetrics(r2, mae)
-
-
 def train_model(
     data: FeatureAndLabels, hyperparam_grid: Dict[str, Any]
 ) -> Tuple[BaseEstimator, TaskMetrics]:
@@ -1277,7 +1272,10 @@ def train_model(
     grid_search.fit(preprocess(data.X_train), data.y_train)
     best_model = grid_search.best_estimator_
     y_test_pred = best_model.predict(preprocess(data.X_test))
-    performance_metrics = compute_metrics(data.y_test, y_test_pred)
+    performance_metrics = TaskMetrics(
+        r2_score(data.y_test, y_test_pred),
+        mean_absolute_error(data.y_test, y_test_pred),
+    )
     return (best_model, performance_metrics)
 
 
@@ -1352,7 +1350,7 @@ if __name__ == "__main__":
             s3_bucket,
             r2_metric_error_threshold,
             r2_metric_warning_threshold,
-            HYPERPARAM_GRID
+            HYPERPARAM_GRID,
         )
     except Exception as e:
         log.error(f"Error encountered when training model - {e}")
