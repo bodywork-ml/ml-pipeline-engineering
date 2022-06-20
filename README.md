@@ -130,10 +130,10 @@ We’ve split the various Python package requirements into separate files:
 - `requirements_cicd.txt` contains the packages required by the CICD pipeline.
 - `notebooks/requirements_nb.txt`contains the package required to run the notebook.
 
-We’re planning to deploy the pipeline using Bodywork, which currently targets the Python 3.8 runtime, so we create a Python 3.8 virtual environment in which to install all requirements.
+We’re planning to deploy the pipeline using Bodywork, which currently targets the Python 3.9 runtime, so we create a Python 3.9 virtual environment in which to install all requirements.
 
 ```text
-$ python3.8 -m venv .venv
+$ python3.9 -m venv .venv
 $ source .venv/bin/activate
 $ pip install -r requirements_pipe.txt
 $ pip install -r requirements_cicd.txt
@@ -142,7 +142,7 @@ $ pip install -r requirements_nb.txt
 
 ## Setting-Up the Testing Framework
 
-We’re going to use [pytest](https://docs.pytest.org/en/6.2.x/) to support test development and we’re going to run them via the [Tox](https://tox.readthedocs.io/en/latest/index.html) test automation framework. The best way to get this operational, is to write some skeleton code for the pipeline that can be covered by a couple of basic tests. For example, at trivial level the  `train_model.py` batch job should provide us with some basic logs, whose existence we can test for in `test_train_model.py`. Taking a Test-Driven Development (TDD) approach, we start with the test in `test_train_model.py`,
+We’re going to use [pytest](https://docs.pytest.org/en/6.2.x/) to support test development and we’re going to run them via the [Tox](https://tox.readthedocs.io/en/latest/index.html) test automation framework. The best way to get this operational, is to write some skeleton code for the pipeline that can be covered by a couple of basic tests. For example, at a trivial level the  `train_model.py` batch job should provide us with some basic logs, whose existence we can test for in `test_train_model.py`. Taking a Test-Driven Development (TDD) approach, we start with the test in `test_train_model.py`,
 
 ```python
 from _pytest.logging import LogCaptureFixture
@@ -258,7 +258,7 @@ $ pytest -k test_web_api_returns_valid_response_given_valid_data
 
 ```ini
 [tox]
-envlist = {py38}_{unit_and_functional_tests,static_code_analysis}
+envlist = {py39}_{unit_and_functional_tests,static_code_analysis}
 
 [testenv]
 skip_install = true
@@ -277,10 +277,10 @@ Calling Tox from command line,
 $ tox
 ```
 
-Will run every set of tests - those defined in the commands tagged with `unit_and_functional` and `static_code_analysis` - for every chosen environment, which in this case is just Python 3.8 (`py38`). This environment will have none of the environment variables or commands that are present in the local shell, unless they’ve been specified (we haven’t), and can only use the packages specified in `requirements_cicd.txt` and `requirements_pipe.txt`. Individual test-environment pairs can be executed using the `-e` flag - for example,
+Will run every set of tests - those defined in the commands tagged with `unit_and_functional` and `static_code_analysis` - for every chosen environment, which in this case is just Python 3.9 (`py39`). This environment will have none of the environment variables or commands that are present in the local shell, unless they’ve been specified (we haven’t), and can only use the packages specified in `requirements_cicd.txt` and `requirements_pipe.txt`. Individual test-environment pairs can be executed using the `-e` flag - for example,
 
 ```text
-$ tox -e py38_static_code_analysis
+$ tox -e py39_static_code_analysis
 ```
 
 Will only run Flake8 and MyPy (static code analysis tools) and leave out the unit and functional tests. For more information on working with Tox, see the [documentation](https://tox.readthedocs.io).
@@ -339,17 +339,17 @@ As defined in the tests. FastAPI will also automatically expose the following en
 
 ## Creating a Deployment Environment
 
-Here at Bodywork HQ, we’re advocates for the [“Hello, Production”](https://blog.thepete.net/blog/2019/10/04/hello-production/) school-of-thought, that encourages teams to make the deployment of a skeleton application (such as the trivial pipeline sketched-out in this article), one of the first tasks for any new project. As we have written about [before](https://www.bodyworkml.com/posts/scikit-learn-meet-production), there are many benefits to taking deployment pains early on in a software development project, and then using the initial deployment skeleton as the basis for rapidly delivering useful functionality into production.
+Here at Bodywork HQ, we’re advocates for the [“Hello, Production”](https://blog.thepete.net/blog/2019/10/04/hello-production/) school-of-thought, that encourages teams to make the deployment of a skeleton application (such as the trivial pipeline sketched-out in this article), one of the first tasks for any new pipeline. As we have written about [before](https://www.bodyworkml.com/posts/scikit-learn-meet-production), there are many benefits to taking deployment pains early on in a software development project, and then using the initial deployment skeleton as the basis for rapidly delivering useful functionality into production.
 
-We’re planning to deploy to Kubernetes using [Bodywork](https://bodywork.readthedocs.io/en/latest/), but we appreciate that not everyone has easy access to a Kubernetes cluster for development. If this is your reality, then the next best thing your team could do, is to start by deploying to a local test cluster, to make sure that the pipeline is at least deploy-able. You can get started with a single node cluster on your laptop, using Minikube - see [our guide](https://bodywork.readthedocs.io/en/latest/kubernetes/#getting-started-with-kubernetes) to get this up-and-running in **under 10 minutes**.
+We’re planning to deploy to Kubernetes using [Bodywork](https://bodywork.readthedocs.io/en/latest/), but we appreciate that not everyone has easy access to a Kubernetes cluster for development. If this is your reality, then the next best thing your team could do, is to start by deploying to a local test cluster, to make sure that the pipeline is at least deploy-able. You can get started with a single node cluster on your laptop, using Minikube - see [our guide](https://bodywork.readthedocs.io/en/latest/kubernetes/#quickstart) to get this up-and-running in **under 10 minutes**.
 
 The full description of the deployment is contained in `bodywork.yaml`, which we’ve reproduced below.
 
 ```yaml
-version: "1.0"
-project:
+version: "1.1"
+pipeline:
   name: time-to-dispatch
-  docker_image: bodyworkml/bodywork-core:2.1.7
+  docker_image: bodyworkml/bodywork-core:3.1
   DAG: train_model >> serve_model
 stages:
   train_model:
@@ -357,7 +357,7 @@ stages:
     cpu_request: 0.25
     memory_request_mb: 100
     batch:
-      max_completion_time_seconds: 30
+      max_completion_time_seconds: 60
       retries: 2
   serve_model:
     executable_module_path: pipeline/serve_model.py
@@ -367,7 +367,7 @@ stages:
     cpu_request: 0.25
     memory_request_mb: 100
     service:
-      max_startup_time_seconds: 30
+      max_startup_time_seconds: 90
       replicas: 2
       port: 8000
       ingress: true
@@ -375,23 +375,18 @@ logging:
   log_level: INFO
 ```
 
-This describes a deployment with two stages - `train-model` and `serve-model` - that are executed one after the other, as described in `project.DAG`. For more information on how to configure a Bodywork deployment, checkout the [User Guide](https://bodywork.readthedocs.io/en/latest/).
+This describes a deployment with two stages - `train-model` and `serve-model` - that are executed one after the other, as described in `pipeline.DAG`. For more information on how to configure a Bodywork deployment, checkout the [User Guide](https://bodywork.readthedocs.io/en/latest/user_guide/).
 
-Once you have access to a test cluster, setup a [namespace](https://bodywork.readthedocs.io/en/latest/kubernetes/#basic-concepts) in which to deploy,
+Once you have access to a test cluster, configure it for Bodywork deployments,
 
 ```text
-$ bodywork setup-namespace pipelines
+$ bw configure-cluster
 ```
 
-And then deploy the workflow directly from the GitHub repository (so make sure all commits have been pushed to your remote branch). We’ll use a [local workflow-controller](https://bodywork.readthedocs.io/en/latest/user_guide/#testing-workflows-locally) so that logs are streamed to stdout for easy debugging,
+And then deploy the workflow directly from the GitHub repository (so make sure all commits have been pushed to your remote branch),
 
 ```text
-$ bodywork deployment create \
-    --namespace=pipelines \
-    --name=initial-deployment \
-    --git-repo-url=https://github.com/bodywork-ml/ml-pipeline-engineering \
-    --git-repo-branch=part-one \
-    --local-workflow-controller
+$ bw create deployment https://github.com/bodywork-ml/ml-pipeline-engineering --branch part-one
 ```
 
 We like to watch our deployments rolling-out using the Kubernetes dashboard, as you can see in the video clip below.
@@ -400,10 +395,16 @@ We like to watch our deployments rolling-out using the Kubernetes dashboard, as 
 <img src="https://bodywork-media.s3.eu-west-2.amazonaws.com/eng-ml-pipes/pt1/ml-pipeline-engineering.gif"/>
 </div>
 
-Once the deployment has completed successfully, you can manually test the deployed prediction endpoint using,
+Once the deployment has completed successfully, retrieve the details of the prediction service,
 
 ```text
-$ curl http://CLUSTER_IP/pipelines/time-to-dispatch--serve-model/api/v0.1/time_to_dispatch \
+$ bw get deployment time-to-dispatch serve-model
+```
+
+You can manually test the deployed prediction endpoint using,
+
+```text
+$ curl http://CLUSTER_IP/time-to-dispatch/serve-model/api/v0.1/time_to_dispatch \
     --request POST \
     --header "Content-Type: application/json" \
     --data '{"product_code": "001", "orders_placed": 10}'
@@ -417,6 +418,8 @@ Which should return the same response as before,
   "model_version": "0.1"
 }
 ```
+
+See our guide to [accessing services](https://bodywork.readthedocs.io/en/latest/kubernetes/#accessing-services) for information on how to determine `CLUSTER_IP`.
 
 ## Configuring CI/CD
 
@@ -440,7 +443,7 @@ orbs:
 jobs:
   run-static-code-analysis:
     docker:
-      - image: circleci/python:3.8
+      - image: circleci/python:3.9
     steps:
       - checkout
       - run:
@@ -448,10 +451,10 @@ jobs:
           command: pip install -r requirements_cicd.txt
       - run:
           name: Running tests
-          command: tox -e py38_static_code_analysis
+          command: tox -e py39_static_code_analysis
   run-tests:
     docker: 
-      - image: circleci/python:3.8
+      - image: circleci/python:3.9
     steps:
       - checkout
       - run:
@@ -459,11 +462,11 @@ jobs:
           command: pip install -r requirements_cicd.txt
       - run: 
           name: Running tests
-          command: tox -e py38_unit_and_functional_tests
+          command: tox -e py39_unit_and_functional_tests
   trigger-bodywork-deployment:
     executor:
       name: aws-eks/python
-      tag: "3.8"
+      tag: "3.9"
     steps:
       - aws-eks/update-kubeconfig-with-authenticator:
           cluster-name: bodywork-dev
@@ -473,13 +476,7 @@ jobs:
           command: pip install -r requirements_cicd.txt
       - run: 
           name: Trigger Deployment
-          command: |
-           bodywork deployment create \
-              --namespace=pipelines \
-              --name=cicd-pipeline \
-              --git-repo-url=https://github.com/bodywork-ml/ml-pipeline-engineering \
-              --git-repo-branch=master \
-              --local-workflow-controller
+          command: bodywork create deployment https://github.com/bodywork-ml/ml-pipeline-engineering --branch master
 
 workflows:
   version: 2
@@ -504,7 +501,7 @@ workflows:
 Although this configuration file is specific to CircleCI, it will be easily recognisable to anyone who’s ever worked with similar services such as [GitHub Actions](https://github.com/features/actions), [GitLab CI/CD](https://about.gitlab.com), [Travis CI](https://travis-ci.org), etc. In essence, it defines the following:
 
 - Three separate jobs: `run-static-code-analysis`, `run-tests` and `trigger-bodywork-deployment`. Each of these run in their own Docker container, with the project’s GitHub repo checked-out and any Python dependencies installed. The `trigger-bodywork-deployment` job is set to run on a custom AWS-managed image (or ‘Orb’), that comes with additional tools for working with AWS’s EKS (managed Kubernetes) service, which is our ultimate deployment target.
-- A workflow that is triggered upon every merge request: `run-static-code-analysis` is first executed, which runs `tox -e py38_static_code_analysis`. If this passes, then the `run-tests` job is executed, which runs `tox -e py38_unit_and_functional_tests`. If this also passes, then CircleCI will mark this workflow as ‘passed’ and report this back to GitHub (see below).
+- A workflow that is triggered upon every merge request: `run-static-code-analysis` is first executed, which runs `tox -e py39_static_code_analysis`. If this passes, then the `run-tests` job is executed, which runs `tox -e py39_unit_and_functional_tests`. If this also passes, then CircleCI will mark this workflow as ‘passed’ and report this back to GitHub (see below).
 - A workflow that is triggered upon every merge to `master`: `trigger-bodywork-deployment`is the only job in this pipeline, which uses Bodywork to deploy the latest pipeline (using rolling updates to maintain service availability).
 
 <div align="center">
