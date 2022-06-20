@@ -39,13 +39,7 @@ jobs:
           command: pip install -r requirements_cicd.txt
       - run: 
           name: Trigger Deployment
-          command: |
-            bodywork deployment create \
-              --namespace=pipelines \
-              --name=cicd-pipeline \
-              --git-repo-url=https://github.com/bodywork-ml/ml-pipeline-engineering \
-              --git-repo-branch=master \
-              --local-workflow-controller
+          command: bodywork create deployment https://github.com/bodywork-ml/ml-pipeline-engineering --branch master
 
 workflows:
   version: 2
