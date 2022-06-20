@@ -31,8 +31,8 @@ stages:
       - fastapi>=0.65.2
       - uvicorn>=0.14.0
       - git+https://github.com/bodywork-ml/bodywork-pipeline-utils@v0.1.5
-    cpu_request: 0.25
-    memory_request_mb: 100
+    cpu_request: 0.5
+    memory_request_mb: 250
     service:
       max_startup_time_seconds: 120
       replicas: 2
