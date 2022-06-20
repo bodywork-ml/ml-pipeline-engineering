@@ -3,6 +3,7 @@ pipeline:
   name: time-to-dispatch
   docker_image: bodyworkml/bodywork-core:3.0
   DAG: train_model >> serve_model
+  secrets_group: dev
 stages:
   train_model:
     executable_module_path: pipeline/train_model.py
