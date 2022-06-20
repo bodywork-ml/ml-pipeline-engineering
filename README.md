@@ -823,13 +823,13 @@ stages:
     requirements:
       - numpy>=1.21.0
       - pandas>=1.2.5
-      - scikit-learn>=0.24.2
+      - scikit-learn>=1.0.0
       - git+https://github.com/bodywork-ml/bodywork-pipeline-utils@v0.1.5
     cpu_request: 1.0
-    memory_request_mb: 500
+    memory_request_mb: 1000
     batch:
       max_completion_time_seconds: 180
-      retries: 2
+      retries: 1
     secrets:
       AWS_ACCESS_KEY_ID: aws-credentials
       AWS_SECRET_ACCESS_KEY: aws-credentials
@@ -839,9 +839,9 @@ stages:
     args: ["time-to-dispatch"]
     requirements:
       - numpy>=1.21.0
-      - scikit-learn>=0.24.2
-      - fastapi==0.65.2
-      - uvicorn==0.14.0
+      - scikit-learn>=1.0.0
+      - fastapi>=0.65.2
+      - uvicorn>=0.14.0
       - git+https://github.com/bodywork-ml/bodywork-pipeline-utils@v0.1.5
     cpu_request: 0.25
     memory_request_mb: 100

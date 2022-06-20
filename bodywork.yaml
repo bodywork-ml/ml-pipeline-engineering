@@ -14,7 +14,7 @@ stages:
       - scikit-learn>=1.0.0
       - git+https://github.com/bodywork-ml/bodywork-pipeline-utils@v0.1.5
     cpu_request: 1.0
-    memory_request_mb: 500
+    memory_request_mb: 1000
     batch:
       max_completion_time_seconds: 180
       retries: 1
