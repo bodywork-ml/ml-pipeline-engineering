@@ -863,9 +863,9 @@ This will instruct Bodywork to look for `AWS_ACCESS_KEY_ID`,  `AWS_SECRET_ACCESS
 ```text
 $ bw create secret aws-credentials \
     --group=dev \
-    --data AWS_ACCESS_KEY_ID=AKIAQXKSWMSXZM75WNH7 \
-    --data AWS_SECRET_ACCESS_KEY=F0j7o3srDC2QqExT6y/1t2XTnHrGP6R9OJXiyaGE \
-    --data AWS_DEFAULT_REGION=eu-west-2
+    --data AWS_ACCESS_KEY_ID=put-your-key-in-here \
+    --data AWS_SECRET_ACCESS_KEY=put-your-other-key-in-here \
+    --data AWS_DEFAULT_REGION=wherever-your-cluster-is
 ```
 
 Now you’re ready to push this branch to your remote Git repo! If your tests pass and your colleagues approve the merge, the CD part of the CI/CD pipeline we setup in Part One will ensure the new pipeline is deployed to Kubernetes by Bodywork and executed immediately. Bodywork will perform a rolling-deployment that will ensure zero down-time and automatically roll-back failed deployments to the previous version. When Bodywork has finished, test the new web API,
