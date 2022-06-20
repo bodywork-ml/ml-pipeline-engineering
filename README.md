@@ -208,7 +208,7 @@ if __name__ == "__main__":
 
 Note how we cast the numeric arguments to `float` types before performing basic input validation to ensure that users can’t accidentally specify invalided arguments that could lead to unintended consequences.
 
-When deployed by Bodywork,  `train_model.py`will be executed in a dedicated container on Kubernetes. The required arguments can be passed via the `args` parameter in the `bodywork.yaml` file that describes the deployment, as shown below.
+When deployed by Bodywork,  `train_model.py` will be executed in a dedicated container on Kubernetes. The required arguments can be passed via the `args` parameter in the `bodywork.yaml` file that describes the deployment, as shown below.
 
 ```yaml
 # bodywork.yaml
@@ -813,21 +813,22 @@ The last task we need to complete before we can commit all changes, push to GitH
 version: "1.1"
 pipeline:
   name: time-to-dispatch
-  docker_image: bodyworkml/bodywork-core:3.1
+  docker_image: bodyworkml/bodywork-core:3.0
   DAG: train_model >> serve_model
+  secrets_group: dev
 stages:
   train_model:
     executable_module_path: pipeline/train_model.py
     args: ["bodywork-time-to-dispatch", "0.9", "0.8"]
     requirements:
-      - numpy==1.21.0
-      - pandas==1.2.5
-      - scikit-learn==0.24.2
+      - numpy>=1.21.0
+      - pandas>=1.2.5
+      - scikit-learn>=0.24.2
       - git+https://github.com/bodywork-ml/bodywork-pipeline-utils@v0.1.5
-    cpu_request: 0.5
-    memory_request_mb: 100
+    cpu_request: 1.0
+    memory_request_mb: 500
     batch:
-      max_completion_time_seconds: 15
+      max_completion_time_seconds: 120
       retries: 2
     secrets:
       AWS_ACCESS_KEY_ID: aws-credentials
@@ -837,14 +838,15 @@ stages:
     executable_module_path: pipeline/serve_model.py
     args: ["bodywork-time-to-dispatch"]
     requirements:
-      - numpy==1.21.0
+      - numpy>=1.21.0
+      - scikit-learn>=0.24.2
       - fastapi==0.65.2
       - uvicorn==0.14.0
       - git+https://github.com/bodywork-ml/bodywork-pipeline-utils@v0.1.5
     cpu_request: 0.25
     memory_request_mb: 100
     service:
-      max_startup_time_seconds: 15
+      max_startup_time_seconds: 90
       replicas: 2
       port: 8000
       ingress: true
@@ -859,12 +861,11 @@ logging:
 This will instruct Bodywork to look for `AWS_ACCESS_KEY_ID`,  `AWS_SECRET_ACCESS_KEY` and `AWS_DEFAULT_REGION` in a secret record called `aws-credentials`, so that it can inject these secrets into the containers running the stages of our pipeline (as environment variables that will be detected silently). So, these will have to be created, which can be done as follows,
 
 ```text
-$ bodywork secret create \
-    --namespace=pipelines \
-    --name=aws-credentials \
-    --data AWS_ACCESS_KEY_ID=put-your-key-in-here \
-           AWS_SECRET_ACCESS_KEY=put-your-other-key-in-here \
-           AWS_DEFAULT_REGION=wherever-your-cluster-is
+$ bw create secret aws-credentials \
+    --group=dev \
+    --data AWS_ACCESS_KEY_ID=AKIAQXKSWMSXZM75WNH7 \
+    --data AWS_SECRET_ACCESS_KEY=F0j7o3srDC2QqExT6y/1t2XTnHrGP6R9OJXiyaGE \
+    --data AWS_DEFAULT_REGION=eu-west-2
 ```
 
 Now you’re ready to push this branch to your remote Git repo! If your tests pass and your colleagues approve the merge, the CD part of the CI/CD pipeline we setup in Part One will ensure the new pipeline is deployed to Kubernetes by Bodywork and executed immediately. Bodywork will perform a rolling-deployment that will ensure zero down-time and automatically roll-back failed deployments to the previous version. When Bodywork has finished, test the new web API,
@@ -885,18 +886,18 @@ Where you should observe the same response you received when testing locally,
 }
 ```
 
+See our guide to [accessing services](https://bodywork.readthedocs.io/en/latest/kubernetes/#accessing-services) for information on how to determine `CLUSTER_IP`.
+
 ## Scheduling the Pipeline to run on a Schedule
 
 At this point, the pipeline will have deployed a model using the most recent dataset made available for this task. We know, however, that new data will arrive every Friday evening and so we’d like to schedule the pipeline to run just after the data is expected. We can achieve this using Bodywork cronjobs, as follows,
 
 ```text
-bodywork cronjob create \
-    --namespace=pipelines \
+$ bw create cronjob https://github.com/bodywork-ml/ml-pipeline-engineering \
     --name=weekly-update \
-    --schedule="0 45 * * *" \
-    --git-repo-url=https://github.com/bodywork-ml/ml-pipeline-engineering \
-    --git-repo-branch=master \
-	  --retries=2
+    --branch master \
+    --schedule="45 11 * * 5" \
+	--retries=2
 ```
 
 ## Wrap-Up
