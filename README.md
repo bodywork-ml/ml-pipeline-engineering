@@ -692,7 +692,7 @@ The key changes from the version in Part One are as follows:
 If we start the server locally,
 
 ```text
-$ python -m pipeline.serve_model "bodywork-time-to-dispatch"
+$ python -m pipeline.serve_model time-to-dispatch
 
 2021-07-24 09:56:42,718 - INFO - serve_model.<module> - Successfully loaded model: name:time-to-dispatch|model_type:<class 'sklearn.tree._classes.DecisionTreeRegressor'>|model_timestamp:2021-07-20 14:44:13.558375|model_hash:b4860f56fa24193934fe1ea51b66818d|train_dataset_key:datasets/time_to_dispatch_2021-07-01T16|45|38.csv|train_dataset_hash:"759eccda4ceb7a07cda66ad4ef7cdfbc"|pipeline_git_commit_hash:NA
 2021-07-24 09:56:42,718 - INFO - serve_model.<module> - Successfully loaded model: name:time-to-dispatch|model_type:<class 'sklearn.tree._classes.DecisionTreeRegressor'>|model_timestamp:2021-07-20 14:44:13.558375|model_hash:b4860f56fa24193934fe1ea51b66818d|train_dataset_key:datasets/time_to_dispatch_2021-07-01T16|45|38.csv|train_dataset_hash:"759eccda4ceb7a07cda66ad4ef7cdfbc"|pipeline_git_commit_hash:NA
