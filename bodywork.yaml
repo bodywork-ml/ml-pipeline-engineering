@@ -10,7 +10,7 @@ stages:
     cpu_request: 0.5
     memory_request_mb: 100
     batch:
-      max_completion_time_seconds: 60
+      max_completion_time_seconds: 120
       retries: 2
   serve_model:
     executable_module_path: pipeline/serve_model.py
