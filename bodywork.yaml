@@ -1,7 +1,7 @@
-version: "1.0"
-project:
+version: "1.1"
+pipeline:
   name: time-to-dispatch
-  docker_image: bodyworkml/bodywork-core:2.1.7
+  docker_image: bodyworkml/bodywork-core:3.0
   DAG: train_model >> serve_model
 stages:
   train_model:
@@ -15,7 +15,7 @@ stages:
     cpu_request: 0.5
     memory_request_mb: 100
     batch:
-      max_completion_time_seconds: 15
+      max_completion_time_seconds: 60
       retries: 2
     secrets:
       AWS_ACCESS_KEY_ID: aws-credentials
@@ -33,7 +33,7 @@ stages:
     cpu_request: 0.25
     memory_request_mb: 100
     service:
-      max_startup_time_seconds: 15
+      max_startup_time_seconds: 90
       replicas: 2
       port: 8000
       ingress: true

@@ -810,10 +810,10 @@ The last task we need to complete before we can commit all changes, push to GitH
 - AWS credentials need to be injected into each stage, as required by `bodywork_pipeline_utils.aws`.
 
 ```yaml
-version: "1.0"
-project:
+version: "1.1"
+pipeline:
   name: time-to-dispatch
-  docker_image: bodyworkml/bodywork-core:2.1.7
+  docker_image: bodyworkml/bodywork-core:3.1
   DAG: train_model >> serve_model
 stages:
   train_model:
