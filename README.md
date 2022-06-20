@@ -808,6 +808,7 @@ The last task we need to complete before we can commit all changes, push to GitH
 - Arguments now need to be passed to each stage.
 - The Python package requirements for each stage need to be updated.
 - AWS credentials need to be injected into each stage, as required by `bodywork_pipeline_utils.aws`.
+- CPU and memory resources need to be updated, together with max completion/startup timeouts.
 
 ```yaml
 version: "1.1"
@@ -843,10 +844,10 @@ stages:
       - fastapi>=0.65.2
       - uvicorn>=0.14.0
       - git+https://github.com/bodywork-ml/bodywork-pipeline-utils@v0.1.5
-    cpu_request: 0.25
-    memory_request_mb: 100
+    cpu_request: 0.5
+    memory_request_mb: 250
     service:
-      max_startup_time_seconds: 90
+      max_startup_time_seconds: 180
       replicas: 2
       port: 8000
       ingress: true
